@@ -1,0 +1,39 @@
+/*测试用，预设vant-red主题*/
+.van-theme-red {
+  --van-slider-inactive-background: var(--van-background-3);
+}
+.van-theme-red {
+  --van-slider-inactive-background: var(--van-background-3);
+}
+.van-theme-red {
+  --van-calendar-month-mark-color: rgba(100, 101, 102, 0.2);
+  --van-calendar-day-disabled-color: var(--van-gray-7);
+}
+.van-theme-red {
+  --van-picker-loading-mask-color: rgba(0, 0, 0, 0.6);
+  --van-picker-mask-color: linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.1)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.1));
+}
+.van-theme-red {
+  --van-button-plain-background: transparent;
+}
+.van-theme-red {
+  --van-switch-background: rgba(120, 120, 128, 0.32);
+}
+.van-theme-red {
+  --van-number-keyboard-background: var(--van-gray-8);
+  --van-number-keyboard-key-background: var(--van-gray-7);
+  --van-number-keyboard-key-active-color: var(--van-gray-6);
+}
+.van-theme-red {
+  --van-text-color: #f5f5f5;
+  --van-text-color-2: #707070;
+  --van-text-color-3: #4d4d4d;
+  --van-border-color: #3a3a3c;
+  --van-active-color: #3a3a3c;
+  --van-background: #000;
+  /*--van-background-2: #1c1c1e;*/
+  --van-background-2: red;
+  /*--van-background-3: #37363b;*/
+  --van-background-3: #b75151;
+}

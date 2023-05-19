@@ -1,0 +1,10 @@
+1、state.rid判断大小
+2、改写router的push replace go goback方法，前两个方法分别标记前进，后两个变量标记为回退；其余状态为null
+   在beforeEach中将前进回退的标记 转存到 to.params 里面，然后将标记重置为null
+
+优先 判断条件2中 to 是否满足回退和前进，如果满足，直接判定；如果不满足，则再依据state.rid去判断
+判断逻辑 统一在VuePageAnimation中进行。
+
+//不能保证 以后是否都满足，这主要看router组件是否一直保证逻辑不变（至少与vue2是不一致）
+目前 浏览器刷新 回退 前进 都符合以上判断逻辑，（浏览器手势问题）
+

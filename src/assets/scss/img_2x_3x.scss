@@ -1,0 +1,18 @@
+// 2,3倍图适配
+$_img_root: '@/assets/img_2_3x/';
+//img 用这个
+@mixin bg_img_2_3x($url, $reapt: no-repeat, $size: 100%) {
+  background-image: url($_img_root + $url + '@2x.png');
+  background-repeat: $reapt;
+  background-size: $size;
+  @media (-webkit-min-device-pixel-ratio: 3), (min-device-pixel-ratio: 3) {
+    background-image: url($_img_root + $url + '@3x.png');
+  }
+}
+//img 这个不好使，postcss处理掉了
+@mixin img_2_3x($url) {
+  content: url($_img_root + $url + '@2x.png');
+  @media (-webkit-min-device-pixel-ratio: 3), (min-device-pixel-ratio: 3) {
+    content: url($_img_root + $url + '@3x.png');
+  }
+}

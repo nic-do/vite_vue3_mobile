@@ -1,0 +1,1 @@
+import a from"./data_trans-380f9a89.js";import{j as t,a as e,o as s}from"./plugins-libs-4a048428.js";const _=t({name:"data_trans_sub_next"}),m=Object.assign(_,{setup(n){return(o,r)=>(s(),e(a,{subflag:2}))}});export{m as default};

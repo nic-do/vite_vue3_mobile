@@ -1,0 +1,13 @@
+有问题-待解决
+big-list 内部整合了vanlist和第三方虚拟列表 DynamicScroller(直接引了2.0.0-beta.4源码)
+
+npm i vue-virtual-scroller@2.0.0-beta.4
+目前只有2.0.0-beta.1及以上支持vue3，且只有2.0.0-beta.1-2.0.0-beta.4
+这几个版本 在ios手机上滑动 相对流畅点，其他卡顿明显
+总的来说：文字支持还好，图片不太好用
+
+注：DynamicScroller测试过的版本2.0.0-beta.4 - 2.0.0-beta.8
+   libs/dynamic-scroller 目前引用的版本是 2.0.0-beta.4源码
+
+   bakVirtualScrollList_BAK是2.0.0-beta.8源码 存在的问题：在pc上运行正常，在ios上 下拉滑动卡顿严重（上拉正常）。
+                                         改了部分逻辑，将下拉的重绘放在滚动停止后，导致较长时间的空白。

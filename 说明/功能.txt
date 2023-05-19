@@ -1,0 +1,41 @@
+1、适配移动端分辨率：相关库说明见(vw.config)
+切图依据尺寸：750*1334  对应的是100vw*100vh
+           即使用750px宽度的视觉设计稿，那么100vw = 750px，即1vw = 7.5px
+注意：1、css-class定义中 直接用px（7.5px==1vw）即可，编译后自动替换vw
+     2、变量中定义的无法自动替换
+     3、style中定义的无法自动替换
+     4、vant 是依据 375的，这里使用750就需要在vw.config中配置排除vant；如引入其他库，同样需要排除
+     因此若无特殊要求，最好在class中定义
+2、适配webp （build自动转换 未完成）
+3、适配2倍图-3倍图 （见assets/scss/img_2x_3x）
+
+一、主要的功能
+1、多首页            完成 见多入口说明
+2、跨页面跳转数据传递  完成 有一定限制，数据传递借用history.state完成，跨页面跳转解决用keepalive数组
+3、国际化 i18n+vant  完成 在App.vue中使用 provide('i18n_t', t) 在子页面 inject 后直接使用
+                    语言是按需加载的，并且代码里面对于缺少的语言-使用了有道翻译对模版进行翻译动态生成，实际使用请 自行屏蔽
+4、整体风格 定制切换   完成 缓存stores/theme 1、使用js转换utils/theme 2、css文件见assets/theme与public 具体看主题切换说明
+5、动画              完成 测试常用的css框架
+6、统计图 echarts    完成 按需加载及主题切换
+7、svg按需加载       完成 缺陷是不能 文件目录结构有要求
+8、虚拟列表          完成 使用的是第三方源码 DynamicScroller
+9、vw-vh 兼容        完成
+
+二、其他
+1、mock+faker-js 本地测试网络请求 完成 与工程代码基本无耦合
+
+三、axios逻辑
+1、登录，(user信息存stores/userinfo中)，不需要token鉴权
+2、其他需要token鉴权的(统一在 utils/axios/service中处理)，需要根据实际修改
+3、业务相关，方request目录下
+
+四、页面如果是板板正正的设计,可以使用以下固定模版填充slot
+ <page-root >
+     <template v-slot:left><div>left</div></template>
+     <template v-slot:title><div>title</div></template>
+     <template v-slot:right><div>right</div></template>
+    <template v-slot:body>
+        <div>content</div>
+    </template>
+ </page-root>
+   如果是要做酷炫的滑动交互，则建议完全自定义

@@ -1,0 +1,34 @@
+一、keepalive逻辑
+push/replace/forward 加载的页面 默认都会加入到keepalive， 需要排除的页面在keepalive.js 的中__excludes中配置
+replace 加载页面，会将from页面从keepalive中删除
+go/back/goBack  会将from页面从keepalive中删除
+
+二、问题
+1、页面崩溃引起的keepalvie问题
+keepalive 存的是name数组，数组增加移除依据是：页面前进后退
+页面崩溃，无法捕获回退状态，导致数组管理出错。
+
+处理：在页面的create onActivated onMounted中 做校验；此处在全局 mixins理进行判断
+逻辑是；崩溃后的状态 一般直接回到跳转到崩溃页面的前一页面；因此 在前一页面里的 以上三个函数中，移除keepalive数组中位于当前页面name之后的
+
+2、刷新页面导致的keepalive问题
+keepalive数组可以通过storage进行 缓存修复；
+页面刷新会导致页面缓存丢失，这个目前应该是无法处理的，只能重新刷数据，再根据缓存回滚位置
+
+
+三、总结：
+1、keepalive数组  需要在每个页面的created onActivated onMounted中进行一次判断，确保最后的显示页面name在数组中永远是最后一个位置
+                 通过 app.mixin 实现(有冗余)，见：plugins-libs.js
+2、replace go back（含浏览器的）需要从keepalive中移除from页面（浏览器手势的前进、后退）
+                 这里replace删除理由：因为back不到from页面（history中没有），所以应该将from页面从keepalive数组中删除
+
+3、push replace forward 需要 将to页面增加到keepalive
+4、直接url输入地址的,由步骤1确保keepalive数组。
+                 例外的页面：进入初始（这里默认是login）页面的 需要清空 keepalive数组，在router.beforeEach中处理
+                           因为：一般login跳转到主界面 使用的是replace，不存在 回退到login界面的
+                           因此：不是通过 push 和 replace 跳转到login，应该重置keepalive数组
+
+5、刷新导致的keepalive丢失问题，
+  1、是直接丢弃
+  2、用storage去恢复（需要确保顺序），页面重新mount-activate加载数据，恢复scoll位置
+    （可能因为各种不确定的问题，比较复杂）只做了数组恢复。页面恢复未做，页面数据跟实际业务有关联

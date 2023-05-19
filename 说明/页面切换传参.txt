@@ -1,0 +1,24 @@
+注：新版router push replace传参数 变动交大；
+利用的是history.state 刷新页面不会丢失的特点
+
+以下的name 与keepalive的 数组缓存name一致，不考虑同一页面同时出现的情况（如有需要，建议新增一个vue页面（然后以组件的方式引用所需页面））
+程序中使用的方式是：
+push/replace({
+       name:'',
+       state:{ data:{}} //data名字任意
+})
+页面读取 let param=history.state.data
+
+针对回退页面间数据 传递
+在router.beforeEach中 to.params.goBackResult / history.state.goBackResult都可以用来 间接缓存
+在目标页面的onActivated或activated方法中 route.params/history.state 都能读取到
+注：to.params刷新会丢失。保持一致性以及避免干扰：刷新后 history.state.goBackResult 会主动删除
+
+方法扩展：router新增了方法 goBack(name,param) name是前面缓存的页面的name(也可以是-1/-2这种)，param是返回的数据
+        前提是keepalive里有缓存
+
+页面读取  需在onActivated或activated方法中读取，页面刷新会丢失
+        let goBackResult=history.state.goBackResult
+        or  goBackResult=route.params.goBackResult
+        route是useRoute() 或 this.$route （函数式和options的区别）
+注：goBackResult字段，可在router.index中进行修改

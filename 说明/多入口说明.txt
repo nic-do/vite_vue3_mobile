@@ -1,0 +1,23 @@
+本地dev 和 preview（build）都能正常打开。
+目前测试结果：必要的设置
+1、router 必须用 createWebHashHistory
+
+2、vite.config.js中
+   rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'src/index.html'),//这个不必要 默认的入口
+          secproject: resolve(__dirname, 'src/secproject/index.html'),//新增入口1
+          trdproject: resolve(__dirname, 'src/trdproject/index.html') //新增入口2
+        }
+      },
+其中secproject/trdproject是文件夹名称 html名称必须是index.html； 相关的mainxxx.js 和 appxxx.vue名字可随意
+
+3、vite.config.js 需要改变根  root: resolve(__dirname,'src')
+   入口都移到src下面
+
+
+地址格式
+默认的入口：http://localhost:5173/#/login
+新增入口1：http://localhost:5173/secproject/#/
+新增入口2：http://localhost:5173/trdproject/#/
+

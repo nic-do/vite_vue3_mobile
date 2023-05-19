@@ -1,0 +1,13 @@
+主题配置：
+进入官网 https://echarts.apache.org/zh/theme-builder.html
+1、点击 下载主题（重点：一定不能用导出配置） 在json页签中 点击复制，在components/echarts/theme目录下保存为.json文件
+2、import json
+3、registerTheme
+4、在echarts.init中引用 （动态修改，如果已经初始化，再修改需要先echarts.dispose）
+
+按需加载
+core chart component 分别动态加载，与主题加载逻辑一致
+打出来的包用分析器分析的结果(render:650K,Gzip:160K)上下 与import * 全加载（render：2.89M，GZip：700K）相比
+减少了接近2/3
+
+注：工程里的按需加在都是用 import()函数进行的。并没有真实上线的过，preview和dev下都是正常的

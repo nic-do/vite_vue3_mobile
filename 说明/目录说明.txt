@@ -1,0 +1,46 @@
+根目录：
+    keys: 自签名https证书：测试用
+    mock：测试用
+    libs：第三饭ui及动画库
+          子目录 vue-prlx 等:npm安装的依赖无法使用，直接copy了源码
+
+
+    plugins：在vite.config中配置的plugins，包括第三方及自定义的插件
+    env: 配置环境
+
+src下的目录：
+    dev/preview 启动后三个入口 （只改了入口，其他页面都一致，可以一个同时开发多个）
+    src/App.vue index.html index.vue
+    src/secproject (App-project.vue index main-project)
+    src/trdproject (App-study.vue index.html index.vue)
+
+src下其他的目录：
+    unplugin_resolvers unplugin插件自动生成的目录，无需关注（插件非必需）
+    unplugin_types     unplugin插件自动生成的目录，无需关注（插件非必需）
+
+    assets   图片及css
+    components 基础组件，业务无关
+              app-root 多入口，提取了通用的App.vue 的root模版
+              biglist  封装 van-list和dynamic-scroller 包含基本的下拉和上拉 加载
+              echarts  简单封装 echarts 含主题切换以及窗口缩放自动更新
+              page     简单封装 基础页面，将页面分为van-navbar和body
+                       navbar通过 provide[navParams]修改（支持响应式），body通过slot自定义。
+                       包含van的异性屏兼容逻辑。 非必需
+              page-animation   页面切换动画，内部自动判断页面前进后退并切换动画，恢复页面scroll
+              v-number 非必需，第三效果库源码，测试效果用
+
+    i18n     国际化用到语言message 及 异步加载语言并切换
+    request  按业务功能封装 web请求
+    router
+    stores
+    svg      魔改svg，按需动态加载测试
+    theme    主题颜色调整-测试界面
+    utils    一些常用功能
+             axios   axios的简单，service包含过滤相同的请求，根据参数显示请求loading等待
+                     loading只会出现一个，不会同时出现，计数判断最后的请求结束，一起消亡
+             tests   mock测试
+             theme   通过js构造和切换van的基础主题
+
+    views    界面模块
+
+

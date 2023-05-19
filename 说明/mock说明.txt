@@ -1,0 +1,5 @@
+1、配置：(plugins/mock.config.js)
+特别说明  prefix: '^/api',//这里会决定 axios调用mock api 路径前缀
+2、demo：(mock目录)
+只用到了api-dev.mock.ts cookie.mock.ts file-upload.mock.ts 三个
+

@@ -1,0 +1,66 @@
+安装出现 connect ECONNREFUSED 0.0.0.0:443
+       npm ERR!  *** pre-build test failed
+       尝试：npm i *** --S --ignore-scripts  可能会导致安装不全
+
+pinia                         类似Vuex
+pinia-plugin-persist          必须：否则刷新丢失数据
+
+can-i-ignore-scripts          非必需：测试是否可以--ignore-scripts安装
+
+vite-plugin-legacy            非必需：兼容(支持传统浏览器--不支持ESModule（ecmascript）的简称ESM)
+
+postcss-px-to-viewport-8-plugin  必须：px 转 vw
+cssnano
+cssnano-preset-advanced
+postcss-aspect-ratio-mini
+postcss-cssnext postcss-import
+postcss-px-to-viewport-8-plugin
+postcss-url
+postcss-viewport-units
+postcss-preset-env
+viewport-units-buggyfill         兼容
+// 使用vw的buggyfill解决方案会在用到的vw的地方添加content，会影响到img和伪元素，需要全局添加
+// img { content: normal !important; }
+
+sass                          必须：样式处理
+
+
+unplugin-auto-import          非必需；自动 import
+unplugin-vue-components       非必需；按需加载vant等 库，无法加载一些函数式的组件
+vite-plugin-style-import      非必需；说是unplugin-vue-components的补充，可以加载一些函数式的组件，
+                                     然而实际测试结果对当前版本的vant没有用
+
+vite-plugin-compression       非必需：压缩     打包压缩
+vite-plugin-imagemin          非必需：图片压缩，打包压缩 需要环境支持
+
+vite-plugin-vue-setup-extend  非必需：可以直接在script 节点上添加name属性（keepalive用）
+
+vite-plugin-svg   svg加载插件   缺陷是一次性加载到html中，数量太多可能影响首次加载
+
+vite-plugin-mock-dev-server   非必需：mock测试用
+mockjs
+faker-js      非必需，随机数据模拟
+
+vue-i18n       非必需：语言切换
+
+第三方动画 特效：           非必需
+vue3-virtual-scroll  动画
+vue3-sfc-transitions 动画
+vue3-particles   粒子特效
+tsparticles      粒子特效
+particles-bg-vue 粒子特效，无效果
+vue2-animate         动画
+vue-kinesis      ios上无效
+vue-animate-onscroll 动画
+v-wave           点击-水纹效果
+v-animate-css        动画
+swiper           第三方swiper，手机端侧滑页面时 体验不太好
+
+
+image-conversion or compressorjs 图片上传前 压缩用 （手机端原图 太大）
+
+
+vue-lazyload            不需要：懒加载：vant已经有
+h5-vue-scroller
+multistreamsmixer
+vue-global-api

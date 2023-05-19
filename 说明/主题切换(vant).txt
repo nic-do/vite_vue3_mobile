@@ -1,0 +1,30 @@
+van-config-provider 配置在 appRoot.vue根节点
+vant的theme分两种
+1、预设的基础theme （css文件）直接预先import或者动态import（也可在html节点直接修改style 与 themeVars修改类似）
+                        切换后删除无用css节点---未处理
+2、themeVars     （变量）    (在van-config-provider 直接修改style，效果一样)
+
+存在几个问题：
+1、动态加载css文件： dev模式无效，但是preview模式有效
+   eg：在点击按钮切换theme时动态加载
+      await import(`@/assets/theme/red.css`).catch(err=>{
+            console.log('动态加载预设的theme-theme-err',err)
+      })
+   解决方法，1、将css放在静态文件夹public中，使用themeLoad中的loadPublicCSS
+              eg：public/red.css -> ThemeLoad.loadPublicCSS('/red.css')
+           2、使用代码设置 (效果同 1 一样)
+             let cssname='red'
+             let themeVars=ThemeStyle.themeVars()
+             themeVars.background2='red'
+             themeVars.background3='#b75151'
+             let scode=ThemeStyle.config(cssname,themeVars)
+             ThemeLoad.loadCssCode(scode,cssname)
+
+           3、直接设置单个themeVar 优先级高于以上的方式
+             ThemeLoad.setThemeVar('--van-background-2', 'red')
+
+2、与postcsscssnext插件冲突。主题是修改css变量实现的，postcsscssnext会把变量转换成值导致 切换失效
+   现在也不用postcsscssnext，一般用postcss-preset-env
+
+总结：vant  基础theme  可以直接在html节点上的style 和 class 修改
+           其他的     在van-config-provider节点的style 和 class修改

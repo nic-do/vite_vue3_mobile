@@ -1,0 +1,1 @@
+import{c as p,p as a,o,a as c,u as n,A as e,b as t,d as r}from"./plugins-libs-4a048428.js";const _={__name:"App",setup(u){const{t:s}=p.useI18n();return a("i18n_t",s),(f,m)=>(o(),c(n(e)))}},i=t(_);r.config(i);
