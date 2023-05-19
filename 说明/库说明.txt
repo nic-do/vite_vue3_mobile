@@ -32,6 +32,7 @@ vite-plugin-style-import      非必需；说是unplugin-vue-components的补充
 
 vite-plugin-compression       非必需：压缩     打包压缩
 vite-plugin-imagemin          非必需：图片压缩，打包压缩 需要环境支持
+                              这个库经常下载不了，可以先屏蔽掉，同时屏蔽vite-imagemin-webp-plugin中的引用代码，不影响程序
 
 vite-plugin-vue-setup-extend  非必需：可以直接在script 节点上添加name属性（keepalive用）
 

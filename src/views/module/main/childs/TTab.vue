@@ -117,21 +117,6 @@
         <van-divider>prlx---end</van-divider>
       </div>
       <div>
-        <van-divider>prlx---begin</van-divider>
-        <div v-prlx.mobile.background="{ speed: 0.12 }" class="img2"></div>
-        <van-grid style="width: 100vw" square class="van-hairline--bottom">
-          <van-grid-item v-for="value in 8" :key="value" icon="photo-o" text="文字" v-wave>
-            <template v-slot:icon>
-              <div
-                v-prlx.mobile.background="{ speed: 0.12, fromBottom: true, custom: true }"
-                class="img"
-              />
-            </template>
-          </van-grid-item>
-        </van-grid>
-        <van-divider>prlx---end</van-divider>
-      </div>
-      <div>
         <van-divider>图片按比例显示---begin</van-divider>
         <div>在线图片懒加载；高宽2/1</div>
         <van-image
