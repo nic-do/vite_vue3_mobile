@@ -58,5 +58,4 @@ var routes = [
     component: () => import('@/views/module/tests/data_trans_sub_next.vue')
   }
 ]
-
 export default { routes }

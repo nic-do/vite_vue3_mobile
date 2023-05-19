@@ -28,6 +28,7 @@ export default defineMock([
       let userFind = null
       if (request.body!=null){
         //get 用query post用body
+        //此处有点问题 token 可能没生成
         for (let key in user) {
           if (key == request.body['username'] && user[key].password == request.body['password']) {
             token = request.getCookie('token')

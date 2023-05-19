@@ -19,8 +19,8 @@ function getSign(q, type) {
       sign: sign
     }
   } else if (type == 'youdao') {
-    let appid = ''
-    let key = '' //注意：暴露appSecret，有被盗用造成损失的风险
+      let appid = '69fe68c72a5f6474'
+      let key = 'uUJjpJeZb5vjQzEC44xp7obLcls5REhf'//注意：暴露appSecret，有被盗用造成损失的风险
     let salt = new Date().getTime()
     let curtime = Math.round(new Date().getTime() / 1000)
     let str1 = appid + truncate(q) + salt + curtime + key
@@ -90,19 +90,4 @@ export function translate(data, type) {
       errormsg: '不支持' + type
     })
   })
-  // return new Promise(function (resolve) {
-  //   if (type=='baidu'){
-  //     // window.translate(data,function (res){
-  //     //   resolve(res)
-  //     // })
-  //   }else if (type=='youdao'){
-  //     // window.youdao(data, function (res) {
-  //     //   resolve(res)
-  //     // })
-  //   }else{
-  //     resolve({
-  //       errormsg:'不支持'+type
-  //     })
-  //   }
-  // })
 }

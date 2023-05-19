@@ -1,7 +1,7 @@
 import { createI18n, useI18n } from 'vue-i18n'
 //useCurrentLang获取vant当前语言；Locale修改语言
 import { useCurrentLang, Locale } from 'vant'
-import {translate} from "@/request/translate";
+// import {translate} from "@/request/translate";
 import Is from '@/utils/is'
 //缓存
 const loadedLanguages = []
@@ -18,7 +18,6 @@ function setLanguage(lang) {
   } else {
     i18n.global.locale.value = lang
   }
-  // axios.defaults.headers.common['Accept-Language'] = lang
   document.querySelector('html').setAttribute('lang', lang)
 }
 
@@ -99,6 +98,13 @@ const replaceMSg=function (dst,src){
 const getMessageFromBaidu=async function (text){
   if (text){
     let translateType='youdao'
+    let translateJs='translate'
+    let translateData = await import(`@/request/${translateJs}.js`).catch((err) => {
+      if (err) {
+        console.log('--iq8n-import--vant-', err)
+      }
+    })
+    let translate=translateData.translate
     let res=await translate({q:text,to:'zh'},translateType)
     let from=res.from
     if (res.l){
@@ -143,22 +149,5 @@ async function init() {
     await useLocale(useCurrentLang().value)
   }
 }
-// async function loadsvg(name,path){
-//   // 几个奇怪的问题
-//   // 1、let url=`@/svg/${dddd}.js`，不能把 import url
-//   // 2、不能把svg放在asset目录
-//   // 3、把loadsvg 放到某些目录下单独写，也无法import
-//   let svgFile =null
-//   if (path&&path.indexOf('main')>=0){
-//     svgFile = await import(`@/svg/main/${name}.js`).catch(err=>{
-//       console.log('--i18n-loadsvg-err--',err)
-//     })
-//   }else{
-//     svgFile = await import(`@/svg/${name}.js`).catch(err=>{
-//       console.log('--i18n-loadsvg-err--',err)
-//     })
-//   }
-//   return svgFile&&svgFile.default!=undefined?svgFile.default():null
-// }
 //注：useI18n 方法只能在setup中调用
 export default { i18n, init, useLocale, useI18n, useCurrentLang, loadedLanguages }

@@ -16,9 +16,9 @@ import {
 import { useRouter } from 'vue-router'
 //页面根节点
 import PageRoot, { PageNavDef } from '@/components/page'
-import {listener,touchWatch} from '@/utils/listener/index.js'
-import {userInfoStore} from "@/stores/userinfo";
-import {login} from "@/request/user.js";
+import { listener, touchWatch } from '@/utils/listener/index.js'
+import { userInfoStore } from '@/stores/userinfo'
+// import { login } from '@/request/user.js'
 const { proxy } = getCurrentInstance() //用来获取全局变量用；proxy
 const router = useRouter()
 const i18n_t = inject('i18n_t')
@@ -67,12 +67,12 @@ const init = function () {
       showInputLogin.value = !showInputLogin.value
       showLogo.value = !showLogo.value
     }
-      listener.addEventListener(textRef.value, 'AnimationEnd', animFinished)
+    listener.addEventListener(textRef.value, 'AnimationEnd', animFinished)
     listener.addEventListener(imageLogoRef.value.$el, 'AnimationEnd', animFinished)
     listener.addEventListener(meteorAnimRef.value, 'AnimationEnd', animFinished)
     listener.addEventListener(inputHiddenRef.value, 'AnimationEnd', animFinished)
     listener.addEventListener(logoShadowRef.value, 'AnimationEnd', animFinished)
-      touchWatch.setListener(touchListener)
+    touchWatch.setListener(touchListener)
     // document.onmousedown = touchListener
     // document.body.addEventListener('touchmove', touchListener, { passive: false })
     // document.onscroll = touchListener
@@ -86,7 +86,7 @@ const clearAllListener = function () {
   listener.removeEventListener(meteorAnimRef.value, 'AnimationEnd', animFinished)
   listener.removeEventListener(inputHiddenRef.value, 'AnimationEnd', animFinished)
   listener.removeEventListener(logoShadowRef.value, 'AnimationEnd', animFinished)
-    touchWatch.clearListener()
+  touchWatch.clearListener()
   // document.onmousedown = null
   // document.body.removeEventListener('touchmove', touchListener)
   // document.onscroll = null
@@ -228,22 +228,41 @@ const form = reactive({
   name: 'john996',
   pwd: '123456'
 })
+let userWeb = null
+let submitting = false
 const onSubmit = async function (values) {
-  let res= await login({username:form.name,password:form.pwd})
-    if (res.code==200){
-       console.log('--login--',res)
+  if (!submitting) {
+    submitting = true
+    let userJs = 'user'
+    if (!userWeb) {
+       //如果 页面可以 在route中异步 加载，此处就没必要异步
+      // 首次加载，比全局引入减少20k上下的
+      // import {login} from '@/request/user'
+      let userData = await import(`../../../request/${userJs}.js`).catch((err) => {
+        if (err) {
+          console.log(`-import--${userJs}-`, err)
+        }
+      })
+      userWeb = userData.default
+    }
+    if (userWeb) {
+      let res = await userWeb.login({ username: form.name, password: form.pwd }).catch((err)=>{
+          console.log('--login--',err)
+      })
+      if (res&&res.code == 200) {
         userInfoStore().setData(res.data)
         router.replace({
           path: '/mainhome'
         })
+      }
     }
-
+    submitting = false
+  }
 }
 //表单 相关----end----
 
 import imgpath2 from '@/assets/img/m1.png'
 import imgearch from '@/assets/img/earth.png'
-
 </script>
 <template>
   <page-root class="page-back-xk">
@@ -322,12 +341,7 @@ import imgearch from '@/assets/img/earth.png'
               <transition name="btn-login">
                 <div class="login-button" v-show="showInputLogin">
                   <!--避免干扰-->
-                  <van-button
-                    v-wave
-                    round
-                    type="primary"
-                    native-type="submit"
-                  >
+                  <van-button v-wave round type="primary" native-type="submit">
                     <template v-slot:icon>
                       <svg-icon name="youjiantou" color="white" size="24"></svg-icon>
                     </template>

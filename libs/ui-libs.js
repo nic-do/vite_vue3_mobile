@@ -90,7 +90,7 @@ const lazyloadOptions = {
 }
 
 import DynamicScroller from './dynamic-scroller'
-import SvgIcon from '@/components/svg/SvgIcon.vue'
+import { defineAsyncComponent } from 'vue'
 const config = function (app) {
   ///////////////////////////////////////////
   // 使用unplugin-vue-components 按需加载的效果，不能同时全局引用
@@ -99,7 +99,10 @@ const config = function (app) {
   //配置Lazyload 自定义回调
   app.use(Lazyload, lazyloadOptions)
   app.use(DynamicScroller)
-  //全局注册svg-icon
-  app.component('svg-icon', SvgIcon)
+  // 异步注册
+  app.component(
+    'svg-icon',
+    defineAsyncComponent(() => import('@/components/svg/SvgIcon.vue'))
+  )
 }
 export default { config }

@@ -29,7 +29,7 @@ export default defineConfig(({ command, mode }) => ({
   publicDir: resolve(__dirname, 'public'),
   envDir: '../env',
   optimizeDeps: {
-    force: false //true 强制进行依赖预构建,忽略缓存node_modules/.vite/deps
+    force: true //true 强制进行依赖预构建,忽略缓存node_modules/.vite/deps
   },
   plugins: [
     vue({
@@ -109,8 +109,6 @@ export default defineConfig(({ command, mode }) => ({
   },
   esbuild: {
     //去log信息
-    // drop: ['console', 'debugger']
-    //drop:mode==='production'?['console','debugger']:[]
     // drop: command === 'build' ? ['console', 'debugger'] : []
   }
 }))
