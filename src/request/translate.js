@@ -90,19 +90,4 @@ export function translate(data, type) {
       errormsg: '不支持' + type
     })
   })
-  // return new Promise(function (resolve) {
-  //   if (type=='baidu'){
-  //     // window.translate(data,function (res){
-  //     //   resolve(res)
-  //     // })
-  //   }else if (type=='youdao'){
-  //     // window.youdao(data, function (res) {
-  //     //   resolve(res)
-  //     // })
-  //   }else{
-  //     resolve({
-  //       errormsg:'不支持'+type
-  //     })
-  //   }
-  // })
 }
