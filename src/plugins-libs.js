@@ -69,13 +69,6 @@ async function config(app) {
     },
     beforeUnmount() {},
     deactivated() {
-      // if (window&&window.localStorage){
-      //   let backResult=window.localStorage.getItem('goBackResult')
-      //   window.localStorage.removeItem('goBackResult')
-      //   if (backResult){
-      //     this.goBackResult=JSON.parse(backResult)
-      //   }
-      // }
     }
   })
 

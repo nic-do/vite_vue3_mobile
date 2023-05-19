@@ -109,8 +109,6 @@ export default defineConfig(({ command, mode }) => ({
   },
   esbuild: {
     //去log信息
-    // drop: ['console', 'debugger']
-    //drop:mode==='production'?['console','debugger']:[]
     // drop: command === 'build' ? ['console', 'debugger'] : []
   }
 }))
