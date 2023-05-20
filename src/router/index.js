@@ -77,7 +77,7 @@ function clearGoBackResult(to) {
   delete to.params['goBackResult']
   delete history.state['goBackResult']
 }
-//////////////////////////动态加载route----begin
+////////////////////////动态加载route----begin
 let routes = null
 router.addDynamicRoute = async function (to, all) {
   //all为true 增加全部
@@ -128,7 +128,7 @@ router.hasRoutePath=function (name,path){
   }
   return null
 }
-//////////////////////////动态加载route----end
+////////////////////////动态加载route----end
 router.beforeEach(async (to, from, next) => {
   //初始化语言，不会重复初始化
   await i18n.init()
@@ -140,7 +140,7 @@ router.beforeEach(async (to, from, next) => {
     next(false)
     return
   }
-  //////////////////////////动态加载route----begin
+  ////////////////////////动态加载route----begin
   let toname = to.name
   let topath = to.path
   if (!router.hasRoutePath(toname,topath)) {
@@ -160,7 +160,7 @@ router.beforeEach(async (to, from, next) => {
     next(false)
     return
   }
-  //////////////////////////动态加载route----end
+  ////////////////////////动态加载route----end
   if (
     (to.path == '/' || to.path == '/login') &&
     (isForward == null || from.href === '' || from.href == undefined)
