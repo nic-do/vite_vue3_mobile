@@ -1,0 +1,16 @@
+1、异步加载 见router/route_aync_bak.js
+   需要使用函数 defineAsyncComponent
+   测试结果是：只在dev模式有效，build后无法使用。 没有找到原因
+
+2、动态加载 只是把router/route.js 里的复制了一份到 route-dynamic.js中，然后注释掉route.js中不需要 一开始就引入的route
+   效果：能减小 初始加载的 chunk 大概100/200K，与页面多少有关
+   route-dynamic.js 在beforeEach 钩子函数中 加载，
+   加载完route-dynamic.js需要重定向（因为to是没有match信息的，更好的办法是直接补全to的信息，没有尝试），
+   需要重定向需要注意 参数传递，这个预先设定统一的方式即可，这里就是假设所有信息通过history.state传输
+
+3、route里，使用import('...') 函数 比 使用import '...' build后的chunk要小
+
+其他说明
+工程里的动态加载 在beforeEach 是一次性完整加载route-dynamic.js，如果页面很多，常理应该与使用全局加载没太大的区别（首次加载内容总和是一样的）
+可以单独定义route分开加载 (有些需要根据用户权限 控制 前段可以展示的页面，逻辑是一样的)
+

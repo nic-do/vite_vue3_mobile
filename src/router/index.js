@@ -3,6 +3,7 @@ import route from './route'
 import { keepAliveStore } from '@/stores/keepalive'
 import i18n from '@/i18n'
 import trackTouchGoBack from './track-touch-goback'
+// import { routeStore } from '@/stores/route-store'
 const router = createRouter({
   history: createWebHashHistory(),
   routes: route.routes
@@ -76,6 +77,58 @@ function clearGoBackResult(to) {
   delete to.params['goBackResult']
   delete history.state['goBackResult']
 }
+//////////////////////////动态加载route----begin
+let routes = null
+router.addDynamicRoute = async function (to, all) {
+  //all为true 增加全部
+  //all为false 增加to
+  if (!routes) {
+    //import 所有 route
+    let routeDynamic = 'route-dynamic'
+    let ds = await import(`../router/${routeDynamic}.js`).catch((err) => {
+      if (err) {
+        console.log('--route-import--', err)
+      }
+    })
+    if (ds && ds.default != undefined) {
+      routes = ds.default.routes
+    }
+  }
+  function add(it) {
+    // routeStore().addData(it)
+    router.addRoute(it)
+  }
+  let findRoute=null
+  if (routes && (all || (to != undefined && to.name != undefined))) {
+    for (let i = 0; i < routes.length; i++) {
+      let it = routes[i]
+      if (to&&it.name === to.name) {
+        findRoute=it
+        if (!all) {
+          add(it)
+          break
+        }
+      }
+      if (all) {
+        add(it)
+      }
+    }
+  }
+  return findRoute
+}
+router.hasRoutePath=function (name,path){
+  let allroutes=router.getRoutes()
+  for (let i=0;i<allroutes.length;i++){
+    let it=allroutes[i]
+    if (name&&name==it.name){
+      return it
+    }else if (path&&it.path==path){
+      return it
+    }
+  }
+  return null
+}
+//////////////////////////动态加载route----end
 router.beforeEach(async (to, from, next) => {
   //初始化语言，不会重复初始化
   await i18n.init()
@@ -87,6 +140,30 @@ router.beforeEach(async (to, from, next) => {
     next(false)
     return
   }
+  //////////////////////////动态加载route----begin
+  let toname = to.name
+  let topath = to.path
+  if (!router.hasRoutePath(toname,topath)) {
+    //这里不演示增加单一的route
+    await router.addDynamicRoute(null, true)
+    let find= router.hasRoutePath(name,topath)
+    if (!find) {
+      //二次检验
+      next(false)
+      return
+    }else{
+      //假设 数据是state.data,这里预定好规则应该没问题
+      router.push({
+        name:find.name,
+        state:{
+          data:history.state.data
+        }
+      })
+      next(false)
+      return
+    }
+  }
+  //////////////////////////动态加载route----end
   if (
     (to.path == '/' || to.path == '/login') &&
     (isForward == null || from.href === '' || from.href == undefined)

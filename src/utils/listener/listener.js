@@ -8,7 +8,6 @@ function removeEventListener(el, event, func) {
       es.push('MS' + event)
       es.push('o' + lower)
       es.push(lower)
-      console.log('--es--', es)
       es.forEach((value, index, array) => {
         el.removeEventListener(value, func)
       })
@@ -29,7 +28,6 @@ function addEventListener(el, event, func) {
       es.push('MS' + event)
       es.push('o' + lower)
       es.push(lower)
-      console.log('--es--', es)
       es.forEach((value, index, array) => {
         el.removeEventListener(value, func)
         el.addEventListener(value, func)

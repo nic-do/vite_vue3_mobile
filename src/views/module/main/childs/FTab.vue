@@ -61,10 +61,10 @@
         </van-space>
       </van-tab>
       <van-tab title="标签 2">
-        <div style="width: 100vw;" :style="pageHeight"></div>
+        <div style="width: 100vw" :style="pageHeight"></div>
       </van-tab>
       <van-tab title="标签 3">
-        <div style="width: 100vw;" :style="pageHeight"></div>
+        <div style="width: 100vw" :style="pageHeight"></div>
       </van-tab>
       <van-tab title="标签 4"> <van-empty :style="pageHeight" :description="'内容 4'" /></van-tab>
     </van-tabs>
@@ -80,12 +80,12 @@ import { themeStore } from '@/stores/theme'
 export default {
   name: 'FTab',
   computed: {
-      pageHeight:function (){
-          if (this.$refs.root){
-              return 'height:'+this.$refs.root.$el.clientHeight+'px;'
-          }
-          return ''
+    pageHeight: function () {
+      if (this.$refs.root) {
+        return 'height:' + this.$refs.root.$el.clientHeight + 'px;'
       }
+      return ''
+    }
   },
   inject: ['navParams'],
   props: ['relationKey'],
@@ -111,10 +111,11 @@ export default {
   },
   created() {},
   mounted() {
-    this.init()
+    this.init(true)
   },
   activated() {
-    // this.init()
+    // 恢复scolltop
+    this.init()
   },
   deactivated() {
     this.setScrollCache()
@@ -123,10 +124,13 @@ export default {
     this.setScrollCache()
   },
   methods: {
-    init() {
+    init(firstLoad) {
       nextTick(() => {
-        this.gridTest()
-        this.load(true)
+        if (firstLoad) {
+          this.gridTest()
+          this.load(true)
+        }
+        //注：因为没有 只是存在main中，页面刷新会丢失
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)
         if (top != undefined) {
           this.$el.scrollTop = top
