@@ -1,4 +1,3 @@
-//用来测试动态加载route的
 import Login from '@/views/module/login/login.vue'
 var routes = [
   {

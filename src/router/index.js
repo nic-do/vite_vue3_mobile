@@ -144,24 +144,21 @@ router.beforeEach(async (to, from, next) => {
   let toname = to.name
   let topath = to.path
   if (!router.hasRoutePath(toname,topath)) {
-    //这里不演示增加单一的route
+    //加载全部route
     await router.addDynamicRoute(null, true)
     let find= router.hasRoutePath(name,topath)
-    if (!find) {
-      //二次检验
-      next(false)
-      return
-    }else{
-      //假设 数据是state.data,这里预定好规则应该没问题
+    if (find) {
+      //二次检验，假设 数据是state.data,这里预定好规则应该没问题
+      //因为to里缺少match信息，直接重新push简单一些
       router.push({
         name:find.name,
         state:{
           data:history.state.data
         }
       })
-      next(false)
-      return
     }
+    next(false)
+    return
   }
   //////////////////////////动态加载route----end
   if (
