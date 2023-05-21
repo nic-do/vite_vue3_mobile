@@ -1,0 +1,18 @@
+1、转换 （使用插件：plugins/vite-imagemin-webp-plgin）
+   原本是打算使用imagemin去做转换，这个插件一直安装不了。因此使用sharp进行替换
+   另外同样的原因 img.config.js中也屏蔽掉了imagemin相关的图片压缩配置
+   以后使用sharp同样可以实现压缩。
+存在的问题： 1、转webp没法指定目录，是对整个目录做的替换的，没有必要，以后再优化
+           2、图片压缩问题，个人感觉 如果使用webp转换了，似乎没有必要去压缩图片了
+2、使用
+逻辑：dev模式下 使用的还是原格式。
+     发布模式下 自动将后缀改为webp。
+eg：(earth.png对应的webp是由第一步build后生成的)
+import {getAssetsFile} from '@/utils/webp'
+<img :src="getAssetsFile('earth.png')"/>"
+注：1、这里的 earth.png 也可带目录 login/earth.png，
+注：2、getAssetsFile的核心是这个静态目录的引用,这里的img可以自定义
+     let path = new URL(`../../assets/img/${url}`, import.meta.url).href
+     这里需要注意两点：
+     1）../../assets/img/ 这里没法直接用../../assets/,会抛错
+     2）不能修改url的值，可以修改path的值
