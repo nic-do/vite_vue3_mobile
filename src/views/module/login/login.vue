@@ -350,7 +350,7 @@ import {getAssetsFile} from '@/utils/webp'
                   <!--避免干扰-->
                   <van-button v-wave round type="primary" native-type="submit">
                     <template v-slot:icon>
-                      <svg-icon name="youjiantou" color="white" size="24"></svg-icon>
+                      <svg-icon path="youjiantou" color="white" size="24"></svg-icon>
                     </template>
                   </van-button>
                 </div>
