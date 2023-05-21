@@ -19,10 +19,11 @@
       <div>
         <van-divider>svg显示---begin</van-divider>
         <van-space direction="horizontal" size="20">
-          <svg-icon name="logo2" path="main" color="black" size="24">
+          <svg-icon :path="svg1" color="black" size="24">
             <!--            这个颜色改不了-->
           </svg-icon>
-          <svg-icon name="youjiantou" color="blue" size="24"></svg-icon>
+          <svg-icon :path="svg2" color="blue" size="24"></svg-icon>
+            <van-button style="width: 100px" v-wave @click="changeSvg">切换svg</van-button>
           <van-icon name="wechat" color="orange" size="24" />
           <van-icon name="qq" color="red" size="24" />
           <van-icon name="weibo" color="pink" size="24" />
@@ -193,8 +194,14 @@ import VNumber from '@/components/v-number'
 import VUploader from '@/components/v-uploader/v-uploader.vue'
 import imgpath from '@/assets/png/555.webp'
 import { getAssetsFile } from '@/utils/webp'
+import {sv} from "@faker-js/faker";
 export default {
   name: 'TTab',
+    computed: {
+        sv() {
+            return sv
+        }
+    },
   props: ['relationKey'],
   components: {
     VUploader,
@@ -208,6 +215,9 @@ export default {
   },
   data() {
     return {
+        svg1Tosvg2:false,
+        svg1:'main/logo2',
+        svg2:'youjiantou',
       imgpath2: imgpath,
       number: 200,
       likes: 153,
@@ -246,6 +256,11 @@ export default {
         }
       })
     },
+      changeSvg(){
+        let temp=this.svg1
+          this.svg1=this.svg2
+              this.svg2=temp
+      },
     setScrollCache() {
       this.parent.setScrollTop(this.$options.name, this.$el.scrollTop)
       console.log('beforeUnmount', this.$el.scrollTop)
