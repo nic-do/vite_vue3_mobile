@@ -3,30 +3,23 @@
       如需要开启:1)修改vtie.config.js 中 svgloadConfig.config(true) ）
                2)修改plugins-libs.js中 app.config.globalProperties.$useSvgLoad=false
 
-2、按需动态加载：（需要魔改svg文件）
-将svg后缀，改为js，文件内容套一个export default function(){ return `svg原内容`}
-
-因为import可以动态加载js和json（svg、txt等 没试出来）。加载js获取svg内容，动态插入的html的head中即可显示。
-已经解决，可以直接使用阿里图库里下载svg文件了。svg、txt以 ?raw 的方式加载
-
-见utils/svg/svg-load.js （里面保留了分别加载js、svg、txt的方法）
-
+2、按需动态加载：
 使用 import() 函数异步加载 （i18n语言切换以及echarts的主题切换以及按需加载都是 这种写法）
-    eg: import('@/svg/${name}.js') 注：只能是svg目下的js。子目录不可以
-    如果要异步加载 svg/main下的js
-    eg: import('@/svg/main/${name}.js')
+优化；将import() 换成了 import.meta.glob()
 
-注意：svg-load.js里写法  (注意这里import的参数) 。 原因是这里如果用'@/svg/' 死活import不了
+
+注意：svg-load.js里写法  (注意这里import的参数) 。
     eg: await import(`../../svg/${name}.js`).catch(err=>{ })
+
+    const svgs = import.meta.glob(['../../assets/svg/*.svg','../../assets/svg/main/*.svg'], { as: 'raw' })
+重点：都只能是一级目录，无法多级目录，因为glob可以用数组一次性 倒入，所以改成了glob
+   glob返回的 是字典 key是路径，value是 promise
 
 判断import是否有效（参考如下）：
 在google监视中查看 import()如果转成了__variableDynamicImportRuntimeHelper() 表示import是成功的
-svgFile = await import(`../../svg/${name}.js`).catch(err=>{
+svgFile = await import(`../../assets/svg/${name}.svg`).catch(err=>{
             console.log('--svg-load-err--',err)
         })
-svgFile = await __variableDynamicImportRuntimeHelper((/* #__PURE__ */ Object.assign({"../../svg/logo.js": () => import("/svg/logo.js"),"../../svg/youjiantou.js": () => import("/svg/youjiantou.js")})), `../../svg/${name}.js`).catch(err=>{
-            console.log('--svg-load-err--',err)
-        })
-
-总结：1、必须指定目录，不同目录各自独立处理
-     2、不能把js放在asset目录
+ svgFile = await __variableDynamicImportRuntimeHelper((/* #__PURE__ */ Object.assign({"../../assets/svg/logo.svg": () => import("/assets/svg/logo.svg?import&raw"),"../../assets/svg/youjiantou.svg": () => import("/assets/svg/youjiantou.svg?import&raw")})), `../../assets/svg/${name}.svg`).catch((err) => {
+      console.log('--svg-load-err--', err)
+    })
