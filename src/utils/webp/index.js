@@ -14,7 +14,7 @@ const isSupportWebp = function () {
   }
 }
 const getAssetsFile = (url) => {
-  //注：不能修改url （非常重要）
+  //注：不能修改url （非常重要） 另外：url可以是 'login/test1.png'
   let path = new URL(`../../assets/img/${url}`, import.meta.url).href
   if (import.meta.env.PROD && isSupportWebp() && webpTest.test(url)) {
     let idx = path.lastIndexOf('.')
