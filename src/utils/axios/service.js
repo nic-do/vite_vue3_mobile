@@ -115,18 +115,22 @@ service.interceptors.response.use(
    */
   (response) => {
     const res = response.data
-
-    // console.log('---', response.config)
-    resetRequsetCount(true)
-    response.config.cancelToken = null
-    if (res.code !== 200) {
-      //根据实际修改
-      checkStatus(response)
-      return Promise.reject(res)
-    } else {
-      // res为正常返回的内容
-      return res
+    if (response.config.responseType=='blob'){
+      return response.data
+    }else{
+      // console.log('---', response.config)
+      resetRequsetCount(true)
+      response.config.cancelToken = null
+      if (res.code !== 200) {
+        //根据实际修改
+        checkStatus(response)
+        return Promise.reject(res)
+      } else {
+        // res为正常返回的内容
+        return res
+      }
     }
+
   },
   (error) => {
     //重要： 1、interceptors.request.use抛错也会进入这里，处理error时，需要注意
