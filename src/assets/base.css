@@ -28,3 +28,9 @@
   overflow: hidden;
   overflow-y: scroll;
 }
+/*如果src为空，则透明
+  img的src为空时会出现默认的线框
+*/
+img:not([src]) {
+  opacity: 0;
+}
