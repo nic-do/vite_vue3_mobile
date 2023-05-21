@@ -262,11 +262,7 @@ const onSubmit = async function (values) {
 //表单 相关----end----
 
 import imgpath2 from '@/assets/img/m1.png'
-import imgearch from '@/assets/img/earth.png'
 import {getAssetsFile} from '@/utils/webp'
-// const getAssetsFile = (url) => {
-//     return new URL(`../../../assets/img/${url}`, import.meta.url).href
-// }
 </script>
 <template>
   <page-root class="page-back-xk">
@@ -286,13 +282,19 @@ import {getAssetsFile} from '@/utils/webp'
           }"
         />
         <div class="earth-panel">
-          <van-image
-            width="380"
-            height="380"
-            v-lazy
-            :src="getAssetsFile('earth.png')"
-            class="animate__animated animate__slideInLeft"
-          />
+<!--          <van-image-->
+<!--            width="380"-->
+<!--            height="380"-->
+<!--            v-lazy-->
+<!--            :src="getAssetsFile('earth.png')"-->
+<!--            class="animate__animated animate__slideInLeft"-->
+<!--          />-->
+            <img
+                width="380"
+                height="380"
+                v-lazy:src="getAssetsFile('earth.png')"
+                class="animate__animated animate__slideInLeft"
+            />
         </div>
 
         <div class="input-sec">
