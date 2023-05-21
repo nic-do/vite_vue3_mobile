@@ -78,21 +78,31 @@ function clearGoBackResult(to) {
   delete history.state['goBackResult']
 }
 ////////////////////////动态加载route----begin
+const routeDynamicJs = import.meta.glob('./route-dynamic.js')
 let routes = null
 router.addDynamicRoute = async function (to, all) {
   //all为true 增加全部
   //all为false 增加to
   if (!routes) {
+    //按理应该是 异步加载的，不知道为什么会被打在初始包里
     //import 所有 route
-    let routeDynamic = 'route-dynamic'
-    let ds = await import(`../router/${routeDynamic}.js`).catch((err) => {
-      if (err) {
-        console.log('--route-import--', err)
+    //方法一、
+    if (routeDynamicJs){
+      let func=routeDynamicJs['./route-dynamic.js']
+      if (func){
+        let ds = await func()
+        if (ds && ds.default != undefined) {
+          routes = ds.default.routes
+        }
       }
-    })
-    if (ds && ds.default != undefined) {
-      routes = ds.default.routes
     }
+    //方法二、
+    // let routeDynamic = 'route-dynamic'
+    // let ds = await import(`../router/${routeDynamic}.js`).catch((err) => {
+    // })
+    // if (ds && ds.default != undefined) {
+    //   routes = ds.default.routes
+    // }
   }
   function add(it) {
     // routeStore().addData(it)
