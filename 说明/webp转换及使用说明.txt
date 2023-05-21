@@ -1,3 +1,5 @@
+webp优点 图片小，几乎不失真。
+
 1、转换 （使用插件：plugins/vite-imagemin-webp-plgin）
    原本是打算使用imagemin去做转换，这个插件一直安装不了。因此使用sharp进行替换
    另外同样的原因 img.config.js中也屏蔽掉了imagemin相关的图片压缩配置
