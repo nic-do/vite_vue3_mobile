@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 100vw; height: 100vh; overflow: hidden; overflow-y: scroll">
+  <div style="width: 100vw; height: 100vh;padding-bottom: 96px; overflow: hidden; overflow-y: scroll">
     <van-space direction="vertical" size="10" style="min-height: 120vh">
       <!--      <van-divider>数字动画-&#45;&#45;begin</van-divider>-->
       <!--        <van-space direction="horizontal" size="20">-->
@@ -11,7 +11,7 @@
       <div style="display: flex; flex-direction: column">
         <div>2x-3x-img</div>
         <div class="bg_x2_x3_img"></div>
-          <img class="x2_x3_img"/>
+        <img class="x2_x3_img" />
         <div>测试图片上传（mock）</div>
         <v-uploader></v-uploader>
         <van-button style="width: 200px" v-wave>wave动画</van-button>
@@ -164,6 +164,23 @@
 
         <div class="icon" style="width: 50%; --aspect-ratio: 2"></div>
         <van-divider>图片按比例显示---end</van-divider>
+
+        <van-divider>webp切换---begin</van-divider>
+          <div style="color: red">dev模式图片使用原图，build（preview可预览）模式图片自动使用webp</div>
+        <van-image
+          width="380"
+          height="380"
+          v-lazy
+          :src="getAssetsFile('earth.png')"
+          class="animate__animated animate__slideInLeft"
+        />
+        <img
+          width="380"
+          height="380"
+          v-lazy:src="getAssetsFile('earth.png')"
+          class="animate__animated animate__slideInLeft"
+        />
+        <van-divider>webp切换---end</van-divider>
       </div>
     </van-space>
   </div>
@@ -175,6 +192,7 @@ import { nextTick } from 'vue'
 import VNumber from '@/components/v-number'
 import VUploader from '@/components/v-uploader/v-uploader.vue'
 import imgpath from '@/assets/png/555.webp'
+import { getAssetsFile } from '@/utils/webp'
 export default {
   name: 'TTab',
   props: ['relationKey'],
@@ -218,6 +236,7 @@ export default {
     this.setScrollCache()
   },
   methods: {
+    getAssetsFile,
     init() {
       nextTick(() => {
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)
@@ -295,13 +314,13 @@ export default {
 }
 </style>
 <style lang="scss">
-.x2_x3_img{
+.x2_x3_img {
   @include bg_img_2_3x('m');
   width: 100px;
   height: 100px;
 }
 
-.bg_x2_x3_img{
+.bg_x2_x3_img {
   @include img_2_3x('m');
   width: 100px;
   height: 100px;
