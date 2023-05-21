@@ -1,7 +1,5 @@
 import fs from 'fs-extra'
-import imagemin from 'imagemin';
-import imageminWebp from 'imagemin-webp';
-
+import sharp from 'sharp'
 // 遍历 build生成（dist文件夹），将rule的图片 生成一份同名的webp图片
 // 由于依赖库webp的问题 一直没生成成功；问题 同vite-plugin-imagemin
 export default function viteImageminWebp(options) {
@@ -44,9 +42,11 @@ export default function viteImageminWebp(options) {
     writeBundle: {
       sequential: true,
       order: 'post',
-      async handler({ dir }) {
+      async handler(OutputOptions, bundle) {
+        let dir=OutputOptions.dir
         console.log('--writeBundle--', options)
         try {
+          //也可以 遍历 bundle
           let topLevelFiles = fs.readdirSync(dir)
          await enumFiles(dir, topLevelFiles,options)
         } catch (e) {
@@ -96,12 +96,8 @@ async function enumFiles(root, dics,options) {
   }
   async function transToWebp(name,buffer,options){
     try {
-      let content = await imagemin.buffer(buffer, {
-        plugins: [imageminWebp(options)],
-      });
-      // const size = content.byteLength, oldSize = buffer.byteLength;
+      const content = await sharp(buffer).webp(options).toBuffer();
       var outputPath = name+'.webp';
-      console.log('--transToWebp--',outputPath)
       await fs.writeFile(outputPath, content,(err)=>{
         if (err){
           console.log('--transToWebp--',err)

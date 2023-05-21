@@ -1,7 +1,7 @@
 //图片压缩插件
 import viteCompression from 'vite-plugin-compression'
 //imagemin 需要系统环境 安装一些库 eg：pngquant等；安装并设置了环境变量也没有成功！！！以后再试试
-import viteImagemin from 'vite-plugin-imagemin'
+// import viteImagemin from 'vite-plugin-imagemin' //似乎不再维护
 import ImageminWebpPlugin from './vite-imagemin-webp-plugin'
 import { resolve } from 'path'
 
@@ -13,57 +13,57 @@ const config = function (val) {
         threshold: 10240 // the unit is Bytes
       })
     )
-    configs.push(viteImagemin({
-        webp:{
-            quality: 50,
-        },
-        gifsicle: {
-            optimizationLevel: 7,
-            interlaced: false
-        },
-        optipng: {
-            optimizationLevel: 7
-        },
-        mozjpeg: {
-            quality: 20
-        },
-        pngquant: {
-            quality: [0.8, 0.9],
-            speed: 4
-        },
-        svgo: {
-            plugins: [
-                {
-                    name: 'removeViewBox'
-                },
-                {
-                    name: 'removeEmptyAttrs',
-                    active: false
-                }
-            ]
-        }
-    }))
-    // 图片转webp，未完成
-    // configs.push(
-    //     ImageminWebpPlugin({
-    //       test: [
-    //         {
-    //           rule: /\.(jpe?g|png)/,
-    //           options: {
-    //             quality: 75,
-    //             // lossless: true
-    //           }
-    //         }
-    //       ],
-    //       // gifsicle: {
-    //       //   // gif
-    //       //   interlaced: true,
-    //       //   optimizationLevel: 3
-    //       // },
-    //       // cacheFolder: resolve(__dirname, './imageMinCache'),
-    //       overrideExtension: false
-    //     })
-    // )
+    // configs.push(viteImagemin({
+    //     webp:{
+    //         quality: 50,
+    //     },
+    //     gifsicle: {
+    //         optimizationLevel: 7,
+    //         interlaced: false
+    //     },
+    //     optipng: {
+    //         optimizationLevel: 7
+    //     },
+    //     mozjpeg: {
+    //         quality: 20
+    //     },
+    //     pngquant: {
+    //         quality: [0.8, 0.9],
+    //         speed: 4
+    //     },
+    //     svgo: {
+    //         plugins: [
+    //             {
+    //                 name: 'removeViewBox'
+    //             },
+    //             {
+    //                 name: 'removeEmptyAttrs',
+    //                 active: false
+    //             }
+    //         ]
+    //     }
+    // }))
+    // 图片转webp
+    configs.push(
+        ImageminWebpPlugin({
+          test: [
+            {
+              rule: /\.(jpe?g|png)/,
+              options: {
+                quality: 75,
+                // lossless: true
+              }
+            }
+          ],
+          // gifsicle: {
+          //   // gif
+          //   interlaced: true,
+          //   optimizationLevel: 3
+          // },
+          // cacheFolder: resolve(__dirname, './imageMinCache'),
+          overrideExtension: false
+        })
+    )
   }
   return configs
 }
