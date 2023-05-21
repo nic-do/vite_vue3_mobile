@@ -45,7 +45,7 @@ const lazyloadOptions = {
       if (listener.el){
         if (listener.el.tagName=='IMG'&&
             listener.el.src!=listener.src){
-          listener.el=listener.src
+          listener.el.src=listener.src
         }
       }
     },
