@@ -194,13 +194,9 @@ import VNumber from '@/components/v-number'
 import VUploader from '@/components/v-uploader/v-uploader.vue'
 import imgpath from '@/assets/png/555.webp'
 import { getAssetsFile } from '@/utils/webp'
-import {sv} from "@faker-js/faker";
 export default {
   name: 'TTab',
     computed: {
-        sv() {
-            return sv
-        }
     },
   props: ['relationKey'],
   components: {

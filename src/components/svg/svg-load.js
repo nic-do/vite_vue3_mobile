@@ -1,4 +1,3 @@
-import { sv } from '@faker-js/faker'
 
 function loadSvgCode(code, name) {
   let symbolId = `icon-${name}`
