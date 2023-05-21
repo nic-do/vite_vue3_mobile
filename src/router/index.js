@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import route from './route'
+// import route from "./route_async_bak";
 import { keepAliveStore } from '@/stores/keepalive'
 import i18n from '@/i18n'
 import trackTouchGoBack from './track-touch-goback'
@@ -16,11 +17,27 @@ let push = router.push
 let isForward_replace = null
 let isForward = null
 let isBack = null
-router.push = function (to) {
+router.push =async function (to) {
+  if (!router.hasRoutePath(to.name, to.path)) {
+    //加载全部route
+    await router.addDynamicRoute(to)
+    let find = router.hasRoutePath(to.name, to.path)
+    if (!find) {
+      return Promise.reject()
+    }
+  }
   isForward = true
   push.call(this, to)
 }
-router.replace = function (to) {
+router.replace =async function (to) {
+  if (!router.hasRoutePath(to.name, to.path)) {
+    //加载全部route
+    await router.addDynamicRoute(to)
+    let find = router.hasRoutePath(to.name, to.path)
+    if (!find) {
+      return Promise.reject()
+    }
+  }
   isForward = true
   isForward_replace = true
   replace.call(this, to)
@@ -78,55 +95,24 @@ function clearGoBackResult(to) {
   delete history.state['goBackResult']
 }
 ////////////////////////动态加载route----begin
-const routeDynamicJs = import.meta.glob('./route-dynamic.js')
-let routes = null
-router.addDynamicRoute = async function (to, all) {
-  //all为true 增加全部
-  //all为false 增加to
-  if (!routes) {
-    //按理应该是 异步加载的，不知道为什么会被打在初始包里
-    //import 所有 route
-    //方法一、
-    if (routeDynamicJs){
-      let func=routeDynamicJs['./route-dynamic.js']
-      if (func){
-        let ds = await func()
-        if (ds && ds.default != undefined) {
-          routes = ds.default.routes
-        }
-      }
-    }
-    //方法二、
-    // let routeDynamic = 'route-dynamic'
-    // let ds = await import(`../router/${routeDynamic}.js`).catch((err) => {
-    // })
-    // if (ds && ds.default != undefined) {
-    //   routes = ds.default.routes
-    // }
-  }
+import routeAsync from './route-dynamic'
+router.addDynamicRoute = async function (to) {
   function add(it) {
     // routeStore().addData(it)
     router.addRoute(it)
   }
-  let findRoute=null
-  if (routes && (all || (to != undefined && to.name != undefined))) {
-    for (let i = 0; i < routes.length; i++) {
-      let it = routes[i]
-      if (to&&it.name === to.name) {
-        findRoute=it
-        if (!all) {
-          add(it)
-          break
-        }
-      }
-      if (all) {
-        add(it)
-      }
+  for (let i=0;i<routeAsync.routes.length;i++){
+    let findRoute=routeAsync.routes[i]
+    if (findRoute.name==to.name||findRoute.path==to.path){
+      let it=await routeAsync.getRoute(findRoute.name)
+      router.addRoute(it)
+      /////routeStore().addData(it)
+      return it
     }
   }
-  return findRoute
+  return null
 }
-router.hasRoutePath=function (name,path){
+router.hasRoutePath= function (name,path){
   let allroutes=router.getRoutes()
   for (let i=0;i<allroutes.length;i++){
     let it=allroutes[i]
@@ -155,8 +141,8 @@ router.beforeEach(async (to, from, next) => {
   let topath = to.path
   if (!router.hasRoutePath(toname,topath)) {
     //加载全部route
-    await router.addDynamicRoute(null, true)
-    let find= router.hasRoutePath(name,topath)
+    await router.addDynamicRoute(to)
+    let find= router.hasRoutePath(toname,topath)
     if (find) {
       //二次检验，假设 数据是state.data,这里预定好规则应该没问题
       //因为to里缺少match信息，直接重新push简单一些

@@ -1,61 +1,82 @@
-import Login from '@/views/module/login/login.vue'
+// import Login from '@/views/module/login/login.vue'
 var routes = [
-  {
-    path: '/',
-    name: 'login',
-    component: Login
-  },
   {
     path: '/mainhome',
     name: 'mainhome',
-    component: () => import('@/views/module/main/main.vue'),
+    com:'module/main/main.vue',
     children: [
       {
         path: '/mainhome/FTab',
         name: 'FTab',
-        component: () => import('@/views/module/main/childs/FTab.vue')
+        com:'module/main/childs/FTab.vue'
       },
       {
         path: '/mainhome/STab',
         name: 'STab',
-        component: () => import('@/views/module/main/childs/STab.vue')
+        com:'module/main/childs/STab.vue'
       },
       {
         path: '/mainhome/TTab',
         name: 'TTab',
-        component: () => import('@/views/module/main/childs/TTab.vue')
+        com:'module/main/childs/TTab.vue'
       }
     ]
   },
   {
     path: '/list_scroller',
     name: 'list_scroller',
-    component: () => import('@/views/module/tests/list_scroller.vue')
+    com:'module/tests/list_scroller.vue'
   },
   {
     path: '/list_van',
     name: 'list_van',
-    component: () => import('@/views/module/tests/list_van.vue')
+    com:'module/tests/list_van.vue'
   },
   {
     path: '/echarts',
     name: 'echarts',
-    component: () => import('@/views/module/tests/echarts.vue')
+    com:'module/tests/echarts.vue'
   },
   {
     path: '/data_trans',
     name: 'data_trans',
-    component: () => import('@/views/module/tests/data_trans.vue')
+    com:'module/tests/data_trans.vue'
   },
   {
     path: '/data_trans_sub',
     name: 'data_trans_sub',
-    component: () => import('@/views/module/tests/data_trans_sub.vue')
+    com:'module/tests/data_trans_sub.vue'
   },
   {
     path: '/data_trans_sub_next',
     name: 'data_trans_sub_next',
-    component: () => import('@/views/module/tests/data_trans_sub_next.vue')
+    com:'module/tests/data_trans_sub_next.vue'
   }
 ]
-export default { routes }
+
+const getComponent=async function (path){
+  const dics = import.meta.glob(['../views/module/**/*.vue'])
+  let tt=dics['../views/'+path]
+  return tt
+}
+const getRoute=async function(name){
+  for (let i=0;i<routes.length;i++){
+    let route={...routes[i]}
+    if (route.name==name){
+      if (route.children&&route.children.length>0){
+        for (let j=0;j<route.children.length;j++){
+          let child=route.children[i]
+          let com=child.com
+          delete child['com']
+          child.component=await getComponent(com)
+        }
+      }
+      let com=route.com
+      delete route['com']
+      route.component=await getComponent(com)
+      return route
+    }
+  }
+  return null
+}
+export default { routes,getRoute }

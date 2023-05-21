@@ -58,7 +58,10 @@ async function loadsvg(name) {
   //   loadSvgCode(text, name)
   // }
   //新模式，其实差不多
-  const svgs = import.meta.glob(['../../assets/svg/*.svg', '../../assets/svg/main/*.svg'], {
+  // const svgs = import.meta.glob(['../../assets/svg/*.svg', '../../assets/svg/main/*.svg'], {
+  //   as: 'raw'
+  // })
+  const svgs = import.meta.glob(['../../assets/**/*.svg'], {
     as: 'raw'
   })
   let func = svgs['../../assets/svg/' + name + (name.indexOf('.svg')<=0?'.svg':'')]

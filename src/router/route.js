@@ -1,11 +1,11 @@
 // import Login from '@/views/module/login/login.vue'
 var routes = [
-  // {
-  //   path: '/',
-  //   name: 'login',
-  //   component: Login
-  //   //component: () => import('@/views/module/login/login.vue'),
-  // },
+  {
+    path: '/',
+    name: 'login',
+    // component: Login
+    component: () => import('@/views/module/login/login.vue'),
+  },
   // {
   //   path: '/mainhome',
   //   name: 'mainhome',

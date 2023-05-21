@@ -1,9 +1,6 @@
 // 懒加载：defineAsyncComponent 方法 注：dev可以用，build以后用不了。
 import { defineAsyncComponent } from 'vue'
 const _import = (path) => defineAsyncComponent(() => import(`/views/${path}.vue`))
-// const _import = (path) =>  defineAsyncComponent({
-//   loader: () => import(`/views/${path}.vue`)
-// })
 var routes = [
   {
     path: '/',
