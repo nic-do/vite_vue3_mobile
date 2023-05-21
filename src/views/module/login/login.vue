@@ -263,6 +263,10 @@ const onSubmit = async function (values) {
 
 import imgpath2 from '@/assets/img/m1.png'
 import imgearch from '@/assets/img/earth.png'
+import {getAssetsFile} from '@/utils/webp'
+// const getAssetsFile = (url) => {
+//     return new URL(`../../../assets/img/${url}`, import.meta.url).href
+// }
 </script>
 <template>
   <page-root class="page-back-xk">
@@ -285,7 +289,8 @@ import imgearch from '@/assets/img/earth.png'
           <van-image
             width="380"
             height="380"
-            :src="imgearch"
+            v-lazy
+            :src="getAssetsFile('earth.png')"
             class="animate__animated animate__slideInLeft"
           />
         </div>
