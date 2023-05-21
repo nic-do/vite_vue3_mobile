@@ -1,3 +1,5 @@
+import { sv } from '@faker-js/faker'
+
 function loadSvgCode(code, name) {
   let symbolId = `icon-${name}`
   let svcCode = analyse(code, symbolId)
@@ -38,58 +40,59 @@ function analyse(code, symbolId) {
   return data
 }
 
+//1、使用import() or import.meta.glob()
 //直接将svg以以字符串形式导入资源
-async function loadsvg(name, path) {
-  let svgFile = null
-  if (path && path.indexOf('main') >= 0) {
-    svgFile = await import(`../../svg/main/${name}.svg?raw`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  } else {
-    svgFile = await import(`../../svg/${name}.svg?raw`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  }
-  if (svgFile&&svgFile.default!=undefined){
-    let text = svgFile.default
-    loadSvgCode(text, name)
+async function loadsvg(name) {
+  // let svgFile = null
+  // 旧模式
+  // if (name && name.indexOf('main/') >= 0) {
+  //   svgFile = await import(`../../assets/svg/main/${name}.svg?raw`).catch((err) => {
+  //     console.log('--svg-load-err--', err)
+  //   })
+  // } else {
+  //   svgFile = await import(`../../assets/svg/${name}.svg?raw`).catch((err) => {
+  //     console.log('--svg-load-err--', err)
+  //   })
+  // }
+  // if (svgFile && svgFile.default != undefined) {
+  //   let text = svgFile.default
+  //   loadSvgCode(text, name)
+  // }
+  //新模式，其实差不多
+  const svgs = import.meta.glob(['../../assets/svg/*.svg', '../../assets/svg/main/*.svg'], {
+    as: 'raw'
+  })
+  let func = svgs['../../assets/svg/' + name + (name.indexOf('.svg')<=0?'.svg':'')]
+  if (func) {
+    let text = await func()
+    let nameId = name
+    let names = name.split('/')
+    if (names && names.length > 0) {
+      nameId = names[names.length - 1].replace('.svg', '')
+    }
+    loadSvgCode(text, nameId)
   }
 }
 
-//////////////这两个方法不再需要////////////
-//txt
-async function loadsvgTxt(name, path) {
-  let svgFile = null
-  if (path && path.indexOf('main') >= 0) {
-    svgFile = await import(`../../svg/main/${name}.txt?raw`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  } else {
-    svgFile = await import(`../../svg/${name}.txt?raw`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  }
-  if (svgFile&&svgFile.default!=undefined){
-      let text = svgFile.default
-      loadSvgCode(text, name)
-  }
-}
-//js
-async function loadsvgJs(name, path) {
-  let svgFile = null
-  if (path && path.indexOf('main') >= 0) {
-    svgFile = await import(`../../svg/main/${name}.js`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  } else {
-    svgFile = await import(`../../svg/${name}.js`).catch((err) => {
-      console.log('--svg-load-err--', err)
-    })
-  }
+//2、使用axios下载svg的方式，缺陷是可能因为 服务器的策略 下载不了
+//  这种方式可以将svg放在assets目录下
+//  name格式：eg.svg or dir/eg.svg
+import service from '@/utils/axios/service'
+async function loadsvg_axios(name) {
+  //注：不能修改name （非常重要） 外部要补全后缀 .svg
+  let path = new URL(`../../assets/svg/${name}`, import.meta.url).href
+  let svgFile = await service({ url: path, method: 'GET', responseType: 'blob' }).catch((err) => {})
+  let text = null
   if (svgFile) {
-    let text = svgFile.default()
-    loadSvgCode(text, name)
+    text = await svgFile.text().catch((err) => {})
+  }
+  if (text) {
+    let nameId = name
+    let names = name.split('/')
+    if (names && names.length > 0) {
+      nameId = names[names.length - 1].replace('.svg', '')
+    }
+    loadSvgCode(text, nameId)
   }
 }
-////////////////////////////////////////
-export default { loadsvg, loadSvgCode }
+export default { loadsvg, loadSvgCode, loadsvg_axios }

@@ -3,37 +3,47 @@
     :class="svgClass"
     v-bind="$attrs"
     aria-hidden="true"
+    :name="name"
     :style="{ color: color, fontSize: fontSize + 'px' }"
   >
     <use :xlink:href="iconName"></use>
   </svg>
 </template>
 <script>
-import i18n from '@/i18n'
 import svgLoad from '@/components/svg/svg-load'
-import { getCurrentInstance } from 'vue'
+import { getCurrentInstance, watch, ref } from 'vue'
 
 export default {
   name: 'svg-icon',
   setup(props, context) {
+    const name = ref('')
     const { proxy } = getCurrentInstance()
-    if (proxy.$useSvgLoad) {
-      //启用按需加载 （注：请禁用插件配置 svgload.config.js）
-      svgLoad.loadsvg(props.name, props.path)
+    const reload = function () {
+      if (props.path) {
+        let names = props.path.split('/')
+        name.value = names[names.length - 1]
+      }
+      if (proxy.$useSvgLoad&&name.value) {
+        //启用按需加载 （注：请禁用插件配置 svgload.config.js）
+        svgLoad.loadsvg(props.path)
+      }
     }
-    return {}
+    watch(
+      () => props.path,
+      () => {
+        reload()
+      }
+    )
+    reload()
+    return {
+      name
+    }
   },
   props: {
-    svg: null,
-    name: {
+    path: {
       //   存名字-不要后缀
       type: String,
       required: true
-    },
-    path: {
-      //可以 含name-不要后缀
-      type: String,
-      default: null
     },
     color: {
       type: String,
@@ -68,35 +78,3 @@ export default {
   text-indent: 0;
 }
 </style>
-<!--<template>-->
-<!--    <svg class="SvgIcon" aria-hidden="true" style="width: 60px;height: 60px;color: red">-->
-<!--        <use :xlink:href="symbolId" />-->
-<!--    </svg>-->
-<!--</template>-->
-
-<!--<script>-->
-<!--import {defineComponent, computed} from 'vue';-->
-
-<!--export default defineComponent({-->
-<!--    name: 'svg-icon',-->
-<!--    props: {-->
-<!--        name: {-->
-<!--            type: String,-->
-<!--            required: true,-->
-<!--        }-->
-<!--    },-->
-<!--    setup(props) {-->
-<!--        const symbolId = computed(() => `#icon-${props.name}`)-->
-<!--        return {symbolId}-->
-<!--    }-->
-<!--});-->
-<!--</script>-->
-<!--<style scoped>-->
-<!--.SvgIcon {-->
-<!--    font-size: inherit;-->
-<!--    fill: currentColor;-->
-<!--    width: 1em;-->
-<!--    height: 1em;-->
-<!--    text-indent: 0;-->
-<!--}-->
-<!--</style>-->
