@@ -54,11 +54,11 @@ export default {
       // Api.Get()
       if (val == 1) {
         this.$router.push({
-          path: '/list'
+          name: 'list'
         })
       } else if (val == 2) {
         this.$router.push({
-          path: '/allTest'
+          name: 'allTest'
         })
       }else{
         // let droute = {

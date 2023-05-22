@@ -20,11 +20,11 @@ const dvclick = function () {
 const btnclick = function (val) {
   if (val == 1) {
     router.push({
-      path: '/list'
+      name: 'list'
     })
   } else {
     router.push({
-      path: '/tests'
+      name: 'tests'
     })
   }
 }
