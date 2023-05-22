@@ -1,9 +1,15 @@
 1、异步加载 见router/route_aync_bak.js
    使用函数 defineAsyncComponent ,这个方法能有效减小 初始加载的chunk
-   缺陷是：测试出的结果是只在dev模式游泳，build后无法使用。 没有找到原因
+   缺陷是：测试出的结果是只在dev模式有效，build后无法使用。build后找不到路径。
 
-2、使用import.meta.glob或component: () => import()这种方式，查看report分析报告，
-   能看到vue都被引入到初始的chunk里面了。不知道是版本问题还是bug？？？
+2、动态加载 见router下的route.js 和 route-dynamic.js
 
+  route.js 使用component: () => import('@/views/module/login/login.vue'),
+  route-dynamic.js使用import.meta.glob
+  原理是一样的，需要在router里维护里一个页面相关的字典。因此会增大初始的chunk，因此比使用defineAsyncComponent要大一些
+
+ 总结：真正的用来显示页面加载都是异步，2比1 build后第一次打开页面需要加载的chunk大小不一样，
+
+ 因此有将import.meta.glob 和 defineAsyncComponent 一起用，看不出来有什么意义。
 
 
