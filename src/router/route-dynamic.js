@@ -59,36 +59,28 @@ var routes = [
   }
 ]
 
-const getComponent = async function (path) {
-  const dics = import.meta.glob(['../views/module/**/*.vue'])
-  return dics['../views/' + path]
-}
-const getRoute = async function (name,path) {
-  let flag=false
+const dics = import.meta.glob(['../views/module/**/*.vue'])//module下所有vue
+const getRoutes = function () {
+  let allroutes = []
   for (let i = 0; i < routes.length; i++) {
-    let route=routes[i]
-    if (name&&path){
-      flag=route.name == name&&route.path == path
-    }else{
-      flag=route.name == name||route.path == path
-    }
-    if (flag) {
-      if (route.component==undefined) {
-        if (route.children && route.children.length > 0) {
-          for (let j = 0; j < route.children.length; j++) {
-            let child = route.children[i]
-            let com = child.com
-            delete child['com']
-            child.component = await getComponent(com)
-          }
+    let route = routes[i]
+    if (route.component === undefined) {
+      if (route.children!=undefined && route.children.length > 0) {
+        for (let j = 0; j < route.children.length; j++) {
+          let child = route.children[j]
+          let com = child.com
+          delete child['com']
+          // child.component = await getComponent(com)
+          child.component =dics['../views/' + com]
         }
-        let com = route.com
-        delete route['com']
-        route.component = await getComponent(com)
       }
-      return route
+      let com = route.com
+      delete route['com']
+      // route.component = await getComponent(com)
+      route.component =dics['../views/' + com]
     }
+    allroutes.push(route)
   }
-  return null
+  return allroutes
 }
-export default {getRoute }
+export default { getRoutes }
