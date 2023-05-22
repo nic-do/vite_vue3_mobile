@@ -8,8 +8,8 @@
   route-dynamic.js使用import.meta.glob
   原理是一样的，需要在router里维护里一个页面相关的字典。因此会增大初始的chunk，因此比使用defineAsyncComponent要大一些
 
- 总结：真正的用来显示页面加载都是异步，2比1 build后第一次打开页面需要加载的chunk大小不一样，
+ 总结：真正的用来显示页面加载都是异步，2比1 build后第一次打开页面需要加载的chunk大一些
 
- 因此有将import.meta.glob 和 defineAsyncComponent 一起用，看不出来有什么意义。
+（有将import.meta.glob 和 defineAsyncComponent 一起用，看不出来有什么意义。）
 
 
