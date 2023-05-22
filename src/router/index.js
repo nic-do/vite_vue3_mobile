@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import route from './route'
-// import route from "./route_async_bak";
 import { keepAliveStore } from '@/stores/keepalive'
 import i18n from '@/i18n'
 import trackTouchGoBack from './track-touch-goback'
@@ -18,54 +17,65 @@ let isForward_replace = null
 let isForward = null
 let isBack = null
 router.push =async function (to) {
-  if (!router.hasRoutePath(to.name, to.path)) {
-    //加载全部route
-    await router.addDynamicRoute(to)
-    let find = router.hasRoutePath(to.name, to.path)
-    if (!find) {
-      return Promise.reject()
-    }
+  let res=await router.checkAndSetRoute(to)
+  if (!res.flag) {
+    return false
   }
   isForward = true
   push.call(this, to)
+  return true
 }
 router.replace =async function (to) {
-  if (!router.hasRoutePath(to.name, to.path)) {
-    //加载全部route
-    await router.addDynamicRoute(to)
-    let find = router.hasRoutePath(to.name, to.path)
-    if (!find) {
-      return Promise.reject()
-    }
+  let res=await router.checkAndSetRoute(to)
+  if (!res.flag) {
+    return false
   }
   isForward = true
   isForward_replace = true
   replace.call(this, to)
+  return true
 }
 router.back = function () {
   isBack = true
   trackTouchGoBack.reset()
   back.call(this)
 }
-router.go = function (num) {
+router.go = async function (num) {
   isBack = true
   trackTouchGoBack.reset()
   go.call(this, num)
 }
 let goBackResult = null
-router.goBack = function (name, param) {
+router.goBack =async function (name, param) {
   let dxToGo = name
   if (!Number.isInteger(name)) {
+    let res=await router.checkAndSetRoute({name:name})
+    if (!res.flag) {
+      return false
+    }
+    if (res.needReplace){
+      //一般是刷新页面，丢失了 前进后退的关系
+      if (param) {
+        goBackResult = {}
+        goBackResult[name] = param
+      } else {
+        goBackResult = null
+      }
+      router.replace({
+        name:name
+      })
+      return
+    }
     let toidx = keepAliveStore().data.indexOf(name)
     let idx = keepAliveStore().data.indexOf(this.currentRoute.value.name)
     dxToGo = toidx - idx
   } else {
     if (dxToGo >= 0) {
-      return
+      return false
     }
     let idx = keepAliveStore().data.length + dxToGo - 1
     if (idx < 0) {
-      return
+      return false
     }
     name = keepAliveStore().data[idx]
   }
@@ -95,16 +105,20 @@ function clearGoBackResult(to) {
   delete history.state['goBackResult']
 }
 ////////////////////////动态加载route----begin
-import routeAsync from './route-dynamic'
+// 1、全局import 这个方式会在页面打开时几就加载
+// import routeAsync from './route-dynamic'
+let routeAsync=null
 router.addDynamicRoute = async function (to) {
-  function add(it) {
-    // routeStore().addData(it)
-    router.addRoute(it)
+  //2、按需加载
+  //需要时才加载，例子里时在 点击登录时才加载，不会重复加载，除非刷新里页面
+  const moudle = import.meta.glob(`./route-dynamic.js`)
+  if (moudle&&moudle['./route-dynamic.js']){
+    let text=await moudle['./route-dynamic.js']()
+    routeAsync=text.default
   }
-  for (let i=0;i<routeAsync.routes.length;i++){
-    let findRoute=routeAsync.routes[i]
-    if (findRoute.name==to.name||findRoute.path==to.path){
-      let it=await routeAsync.getRoute(findRoute.name)
+  if (routeAsync){
+    let it=await routeAsync.getRoute(to.name,to.path)
+    if (it){
       router.addRoute(it)
       /////routeStore().addData(it)
       return it
@@ -123,6 +137,17 @@ router.hasRoutePath= function (name,path){
     }
   }
   return null
+}
+router.checkAndSetRoute= async function (to){
+  let find=true
+  let needReplace=false
+  if (!router.hasRoutePath(to.name, to.path)) {
+    //加载全部route
+    await router.addDynamicRoute(to)
+    find = !!router.hasRoutePath(to.name, to.path)
+    needReplace=true
+  }
+  return {flag:find ,needReplace:needReplace}
 }
 ////////////////////////动态加载route----end
 router.beforeEach(async (to, from, next) => {
