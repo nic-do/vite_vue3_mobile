@@ -83,7 +83,7 @@ export default defineConfig(({ command, mode }) => ({
   },
   // define 注入的变量， 在 mock文件中也可以使用
   define: {
-    __IS_DEVELOPMENT__: JSON.stringify(mode === 'development')
+    __IS_DEVELOPMENT__: JSON.stringify(mode === 'development'),
   },
   ///////////////////
   build: {
@@ -105,7 +105,8 @@ export default defineConfig(({ command, mode }) => ({
       }
     },
     //压缩代码 默认为 Esbuild，它比 terser 快 20-40 倍，压缩率只差 1%-2%。
-    minify: 'esbuild' // boolean | 'terser' | 'esbuild'
+    minify: 'esbuild', // boolean | 'terser' | 'esbuild'
+    sourcemap: true,
   },
   esbuild: {
     //去log信息
