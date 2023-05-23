@@ -1,5 +1,7 @@
 <template>
-  <div style="width: 100vw; height: 100vh;padding-bottom: 96px; overflow: hidden; overflow-y: scroll">
+  <div
+    style="width: 100vw; height: 100vh; padding-bottom: 96px; overflow: hidden; overflow-y: scroll"
+  >
     <van-space direction="vertical" size="10" style="min-height: 120vh">
       <!--      <van-divider>数字动画-&#45;&#45;begin</van-divider>-->
       <!--        <van-space direction="horizontal" size="20">-->
@@ -23,7 +25,7 @@
             <!--            这个颜色改不了-->
           </svg-icon>
           <svg-icon :path="svg2" color="blue" size="24"></svg-icon>
-            <van-button style="width: 100px" v-wave @click="changeSvg">切换svg</van-button>
+          <van-button style="width: 100px" v-wave @click="changeSvg">切换svg</van-button>
           <van-icon name="wechat" color="orange" size="24" />
           <van-icon name="qq" color="red" size="24" />
           <van-icon name="weibo" color="pink" size="24" />
@@ -167,7 +169,9 @@
         <van-divider>图片按比例显示---end</van-divider>
 
         <van-divider>webp切换---begin</van-divider>
-          <div style="color: red">dev模式图片使用原图，build（preview可预览）模式图片自动使用webp</div>
+        <div style="color: red">
+          dev模式图片使用原图，build（preview可预览）模式图片自动使用webp
+        </div>
         <van-image
           width="380"
           height="380"
@@ -182,6 +186,20 @@
           class="animate__animated animate__slideInLeft"
         />
         <van-divider>webp切换---end</van-divider>
+
+        <van-divider>webp背景---begin</van-divider>
+        <div
+          style="width: 380px; height: 380px; background-repeat: no-repeat"
+          :style="{ 'background-image': 'url('+getAssetsFile('earth.png')+')' }"
+        />
+
+          <div>public图片</div>
+          <div
+                  style="width: 380px; height: 380px; background-repeat: no-repeat"
+                  :style="{ 'background-image': 'url('+getPbulicFile('b1.JPG')+')' }"
+          />
+
+        <van-divider>webp背景---begin</van-divider>
       </div>
     </van-space>
   </div>
@@ -193,11 +211,10 @@ import { nextTick } from 'vue'
 import VNumber from '@/components/v-number'
 import VUploader from '@/components/v-uploader/v-uploader.vue'
 import imgpath from '@/assets/png/555.webp'
-import { getAssetsFile } from '@/utils/webp'
+import { getAssetsFile ,getPbulicFile} from '@/utils/webp'
 export default {
   name: 'TTab',
-    computed: {
-    },
+  computed: {},
   props: ['relationKey'],
   components: {
     VUploader,
@@ -211,9 +228,9 @@ export default {
   },
   data() {
     return {
-        svg1Tosvg2:false,
-        svg1:'main/logo2',
-        svg2:'youjiantou',
+      svg1Tosvg2: false,
+      svg1: 'main/logo2',
+      svg2: 'youjiantou',
       imgpath2: imgpath,
       number: 200,
       likes: 153,
@@ -243,6 +260,7 @@ export default {
   },
   methods: {
     getAssetsFile,
+      getPbulicFile,
     init() {
       nextTick(() => {
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)
@@ -252,11 +270,11 @@ export default {
         }
       })
     },
-      changeSvg(){
-        let temp=this.svg1
-          this.svg1=this.svg2
-              this.svg2=temp
-      },
+    changeSvg() {
+      let temp = this.svg1
+      this.svg1 = this.svg2
+      this.svg2 = temp
+    },
     setScrollCache() {
       this.parent.setScrollTop(this.$options.name, this.$el.scrollTop)
       console.log('beforeUnmount', this.$el.scrollTop)
