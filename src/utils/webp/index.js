@@ -1,4 +1,4 @@
-const webpTest = /\.(jpe?g|png)/
+const webpTest = /\.(jpe?g|png)/i
 let flag_isSupportWebp = null
 const isSupportWebp = function () {
   //是否支持webp
@@ -24,5 +24,14 @@ const getAssetsFile = (url) => {
   }
   return path
 }
-
-export { getAssetsFile }
+const getPbulicFile = (url) => {
+  let path = url
+  if (import.meta.env.PROD && isSupportWebp() && webpTest.test(url)) {
+    let idx = path.lastIndexOf('.')
+    if (idx > 0) {
+      path = path.substring(0, idx) + '.webp'
+    }
+  }
+  return path
+}
+export { getAssetsFile,getPbulicFile }

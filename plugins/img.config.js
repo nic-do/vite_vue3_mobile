@@ -48,7 +48,7 @@ const config = function (val) {
         ImageminWebpPlugin({
           test: [
             {
-              rule: /\.(jpe?g|png)/,
+              rule: /\.(jpe?g|png)/i,
               options: {
                 quality: 75,
                 // lossless: true
