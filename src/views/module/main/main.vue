@@ -1,4 +1,4 @@
-<script setup name="mainhome">
+<script setup name="main">
 import {
   provide,
   ref,

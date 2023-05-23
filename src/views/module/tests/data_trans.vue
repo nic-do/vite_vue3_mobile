@@ -71,7 +71,7 @@ const navDef = reactive({
           })
           .catch(() => {
             // on cancel
-            router.goBack('mainhome', { data: 'backfrom ' + route.name + ' 88' })
+            router.goBack('main', { data: 'backfrom ' + route.name + ' 88' })
           })
       }
 

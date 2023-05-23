@@ -13,7 +13,7 @@ import {
   reactive
 } from 'vue'
 //页面根节点
-import PageRoot, { PageNavDef } from '@/components/page/index'
+import PageRoot, { PageNavDef } from '@/components/page'
 import { useChildren, useParent } from '@vant/use'
 
 const props = defineProps(['relationKey'])

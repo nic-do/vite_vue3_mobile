@@ -15,9 +15,9 @@ import {
 //页面根节点
 import PageRoot, { PageNavDef } from '@/components/page/index'
 import { useChildren, useParent } from '@vant/use'
-import reportChild from '@/views/module/report/reportChild.vue'
-import ReportChild from '@/views/module/report/reportChild.vue'
-import ReportChild2 from '@/views/module/report/reportChild2.vue'
+import reportChild from '@/views/module/report/components/reportChild.vue'
+import ReportChild from '@/views/module/report/components/reportChild.vue'
+import ReportChild2 from '@/views/module/report/components/reportChild2.vue'
 const props = defineProps(['relationKey'])
 // const { proxy } = getCurrentInstance() //用来获取全局变量用；proxy
 // const router = useRouter()

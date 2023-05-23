@@ -2,27 +2,32 @@
 var routes = [
   {
     path: '/',
-    name: 'login',
-    // component: Login
-    component: () => import('@/views/module/login/login.vue'),
+    name: '/',
+    redirect:'/login/login'
   },
   // {
-  //   path: '/mainhome',
-  //   name: 'mainhome',
+  //   path: '/',
+  //   name: 'login',
+  //   // component: Login
+  //   component: () => import('@/views/module/login/login.vue'),
+  // },
+  // {
+  //   path: '/main',
+  //   name: 'main',
   //   component: () => import('@/views/module/main/main.vue'),
   //   children: [
   //     {
-  //       path: '/mainhome/FTab',
+  //       path: '/main/FTab',
   //       name: 'FTab',
   //       component: () => import('@/views/module/main/childs/FTab.vue')
   //     },
   //     {
-  //       path: '/mainhome/STab',
+  //       path: '/main/STab',
   //       name: 'STab',
   //       component: () => import('@/views/module/main/childs/STab.vue')
   //     },
   //     {
-  //       path: '/mainhome/TTab',
+  //       path: '/main/TTab',
   //       name: 'TTab',
   //       component: () => import('@/views/module/main/childs/TTab.vue')
   //     }

@@ -8,26 +8,19 @@ export const routeStore = defineStore(
     const __data = ref([])
     //只读
     const data = computed(() => __data.value)
-    function addData(route) {
-        let flag=false
-        if (route) {
-            for (let i=0;i<__data.value.length;i++){
-                if (__data.value[i]==route.name){
-                    flag=true
-                    break
-                }
-            }
-            if (!flag){
-                __data.value.push(route.name)
-                flag=true
-            }
-        }
-        return flag?route:null
+    function addData(keys) {
+      if (keys) {
+        __data.value.push(...keys)
+      }
+    }
+    function clearData() {
+      __data.value = []
     }
     return {
       data,
       addData,
-        __data
+      clearData,
+      __data
     }
   },
   {

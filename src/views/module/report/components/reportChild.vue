@@ -13,7 +13,7 @@
 
 <script>
 import { ref, computed, reactive, getCurrentInstance, provide, inject, nextTick } from 'vue'
-import PageRoot, { PageNavDef } from '@/components/page/index'
+import PageRoot, { PageNavDef } from '@/components/page'
 import { useChildren, useParent } from '@vant/use'
 
 export default {

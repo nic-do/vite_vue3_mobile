@@ -68,7 +68,7 @@ import {
 //         })
 //         .catch(() => {
 //           // on cancel
-//           router.goBack('mainhome', { data: 'backfrom data_trans 33' })
+//           router.goBack('main', { data: 'backfrom data_trans 33' })
 //         })
 //       return false
 //     }

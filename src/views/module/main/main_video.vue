@@ -1,4 +1,4 @@
-<script setup name="mainhome">
+<script setup name="main_video">
 import Page from '@/components/page'
 import { useRouter } from 'vue-router'
 import { provide, ref, watch, nextTick, onActivated, onDeactivated } from 'vue'
@@ -14,21 +14,6 @@ watch(params.value, (newValue, oldValue) => {
   console.log('值发生了变更', newValue, oldValue)
 })
 provide('navParams', params)
-const dvclick = function () {
-  params.value.nav.show = !params.value.nav.show
-}
-const btnclick = function (val) {
-  if (val == 1) {
-    router.push({
-      name: 'list'
-    })
-  } else {
-    router.push({
-      name: 'tests'
-    })
-  }
-}
-
 const count = ref(0)
 onActivated(() => {
   // count.value++
@@ -509,57 +494,6 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
             ></video>
           </div>
         </section>
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <van-button type="primary" @click.stop="btnclick(1)">主要按钮</van-button>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <van-button type="primary" @click.stop="btnclick(2)">tests</van-button>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <van-button type="primary" @click.stop="btnclick">主要按钮</van-button>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p>loginloginloginlogin</p>-->
-        <!--        <p style="color: red">loginloginloginlogin</p>-->
       </div>
     </template>
   </page>

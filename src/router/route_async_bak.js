@@ -9,22 +9,22 @@ var routes = [
     component: () => _import('module/login/login')
   },
   {
-    path: '/mainhome',
-    name: 'mainhome',
+    path: '/main',
+    name: 'main',
     component: () => _import('module/main/main'),
     children: [
       {
-        path: '/mainhome/FTab',
+        path: '/main/FTab',
         name: 'FTab',
         component: () => _import('module/main/childs/FTab')
       },
       {
-        path: '/mainhome/STab',
+        path: '/main/STab',
         name: 'STab',
         component: () => _import('module/main/childs/STab')
       },
       {
-        path: '/mainhome/TTab',
+        path: '/main/TTab',
         name: 'TTab',
         component: () => _import('module/main/childs/TTab')
       }

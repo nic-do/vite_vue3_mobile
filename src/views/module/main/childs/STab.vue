@@ -50,31 +50,6 @@ export default {
       this.parent.setScrollTop(this.$options.name, this.$el.scrollTop)
       console.log('beforeUnmount', this.$el.scrollTop)
     },
-    btnclick(val) {
-      // Api.Get()
-      if (val == 1) {
-        this.$router.push({
-          name: 'list'
-        })
-      } else if (val == 2) {
-        this.$router.push({
-          name: 'allTest'
-        })
-      }else{
-        // let droute = {
-        //   path: '/report',
-        //   name: 'report',
-        //   component: () => import('@/views/module/report/report.vue')
-        // }
-        // if (!this.$router.hasRoute(droute)) {
-        //     //此处动态添加，刷新就丢失
-        //   this.$router.addRoute(droute)
-        // }
-        // this.$router.push({
-        //   path: '/report'
-        // })
-      }
-    },
     rendered() {
       setTimeout(() => {
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)

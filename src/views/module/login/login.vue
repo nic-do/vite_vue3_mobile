@@ -18,6 +18,9 @@ import { useRouter } from 'vue-router'
 import PageRoot, { PageNavDef } from '@/components/page'
 import { listener, touchWatch } from '@/utils/listener/index.js'
 import { userInfoStore } from '@/stores/userinfo'
+
+import routeDics from '@/router/route-dynamic-login'
+import { routeStore } from '@/stores/route-store'
 // import { login } from '@/request/user.js'
 const { proxy } = getCurrentInstance() //用来获取全局变量用；proxy
 const router = useRouter()
@@ -235,7 +238,7 @@ const onSubmit = async function (values) {
     submitting = true
     let userJs = 'user'
     if (!userWeb) {
-       //如果 页面可以 在route中异步 加载，此处就没必要异步
+      //如果 页面可以 在route中异步 加载，此处就没必要异步
       // 首次加载，比全局引入减少20k上下的
       // import {login} from '@/request/user'
       let userData = await import(`../../../request/${userJs}.js`).catch((err) => {
@@ -246,13 +249,25 @@ const onSubmit = async function (values) {
       userWeb = userData.default
     }
     if (userWeb) {
-      let res = await userWeb.login({ username: form.name, password: form.pwd }).catch((err)=>{
-          console.log('--login--',err)
+      let res = await userWeb.login({ username: form.name, password: form.pwd }).catch((err) => {
+        console.log('--login--', err)
       })
-      if (res&&res.code == 200) {
+      if (res && res.code == 200) {
         userInfoStore().setData(res.data)
+        ////////添加--由登录返回参数控制的路由////////
+        //如果要 对多首页 进行不同的配置，需要自行修改一下缓存及读取的逻辑
+        let routekey = []
+        for (let key in routeDics) {
+          //这里是添加里全部，可以自定义过滤规则
+          routekey.push(key)
+        }
+        //缓存到session，避免页面刷新丢失
+        routeStore().addData(routekey)
+        //刷新路由，这一步必须
+        router.addDynamicRoute()
+        ///////////////////////////////////////
         router.replace({
-          path: '/mainhome'
+          name: 'main'
         })
       }
     }
@@ -262,7 +277,7 @@ const onSubmit = async function (values) {
 //表单 相关----end----
 
 import imgpath2 from '@/assets/img/m1.png'
-import {getAssetsFile} from '@/utils/webp'
+import { getAssetsFile } from '@/utils/webp'
 </script>
 <template>
   <page-root class="page-back-xk">
@@ -282,19 +297,19 @@ import {getAssetsFile} from '@/utils/webp'
           }"
         />
         <div class="earth-panel">
-<!--          <van-image-->
-<!--            width="380"-->
-<!--            height="380"-->
-<!--            v-lazy-->
-<!--            :src="getAssetsFile('earth.png')"-->
-<!--            class="animate__animated animate__slideInLeft"-->
-<!--          />-->
-            <img
-                width="380"
-                height="380"
-                v-lazy:src="getAssetsFile('earth.png')"
-                class="animate__animated animate__slideInLeft"
-            />
+          <!--          <van-image-->
+          <!--            width="380"-->
+          <!--            height="380"-->
+          <!--            v-lazy-->
+          <!--            :src="getAssetsFile('earth.png')"-->
+          <!--            class="animate__animated animate__slideInLeft"-->
+          <!--          />-->
+          <img
+            width="380"
+            height="380"
+            v-lazy:src="getAssetsFile('earth.png')"
+            class="animate__animated animate__slideInLeft"
+          />
         </div>
 
         <div class="input-sec">

@@ -54,7 +54,7 @@ async function config(app) {
   //     router.router.addRoute(item)
   // })
   //改写route-----end----
-
+  router.router.addDynamicRoute()
   app.use(router.router)
   app.mixin({
     //注：无法操作 setup

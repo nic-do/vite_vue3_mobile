@@ -83,17 +83,22 @@ function clearGoBackResult(to) {
 //单个route 按需动态加载，路由处理很麻烦，已放弃；
 // 这里，刷新页面时整体加载一次，简单一些
 import routeAsync from './route-dynamic'
-const addDynamicRoute =  function () {
+router.addDynamicRoute =  function () {
   if (routeAsync){
     let routes= routeAsync.getRoutes()
     for (let i=0;i<routes.length;i++){
-      router.addRoute(routes[i])
+      let route=routes[i]
+      if (!router.hasRoute(route.name)){
+        try {
+          router.addRoute(route)
+        }catch (e){
+          let routes=router.getRoutes();
+          console.error('--addDynamicRoute--',e)
+        }
+      }
     }
   }
-  // 如果有路由是 通过网络获取的，首次获取直接添加到router中，同时缓存一份到storage
-  // 刷新时，读取storage 插入到router
 }
-addDynamicRoute()
 ////////////////////////////////////////////////////
 router.beforeEach(async (to, from, next) => {
   //初始化语言，不会重复初始化
