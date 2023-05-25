@@ -170,6 +170,10 @@ export default {
         title: '页面切换数据交互',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
+      this.gridItems.push({
+        title: 'testthree',
+        url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+      })
 
       // for (var i = 0; i < 3; i++) {
       //   this.gridItems.push({
@@ -228,6 +232,7 @@ export default {
     },
     clickGrid(val) {
       let name = null
+        let data=null
       if (val.title == 'van-li') {
         name = 'list_van'
       } else if (val.title == 'scroller-li') {
@@ -242,17 +247,17 @@ export default {
         this.parent.changeLan()
       } else if (val.title == '页面切换数据交互') {
         name = 'data_trans'
+          data={
+              data: { userId: '123' }
+          }
+      } else if (val.title == 'testthree') {
+          name='test_threejs_load'
       }
 
       if (name) {
         this.$router.push({
           name: name,
-          state:
-            name == 'data_trans'
-              ? {
-                  data: { userId: '123' }
-                }
-              : null
+          state:data
         })
       }
     }
