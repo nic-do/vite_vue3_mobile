@@ -32,6 +32,8 @@ export default defineMock([
         for (let key in user) {
           if (key == request.body['username'] && user[key].password == request.body['password']) {
             token = request.getCookie('token')
+            if (!token)
+              token='12131'
             userFind = user[key]
             break
           }

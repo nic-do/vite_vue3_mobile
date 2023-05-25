@@ -55,12 +55,6 @@ const config = function (val) {
               }
             }
           ],
-          // gifsicle: {
-          //   // gif
-          //   interlaced: true,
-          //   optimizationLevel: 3
-          // },
-          // cacheFolder: resolve(__dirname, './imageMinCache'),
           overrideExtension: false
         })
     )

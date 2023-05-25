@@ -5,7 +5,6 @@ import sharp from 'sharp'
 export default function viteImageminWebp(options) {
   const {
     disable = false,
-    // filter = extRE,
     verbose = true,
     test = [
       {
