@@ -39,6 +39,7 @@
     "save": "^2.9.0",
     "sharp": "^0.32.1",
     "swiper": "^7.4.1",
+    "three": "^0.152.2",
     "tsparticles": "^2.9.3",
     "v-animate-css": "^1.0.1",
     "v-wave": "^1.5.0",
