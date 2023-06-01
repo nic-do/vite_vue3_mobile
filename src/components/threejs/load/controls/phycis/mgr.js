@@ -10,9 +10,11 @@ export class Mgr {
     this.colliders = []
     this.world = null
     this.player = null
+    this.npcs=[]
   }
   constructor(com) {
     this.com = com
+    this.npcVelocity = null
     if (com) {
       this.THREE = com.THREE
     }
@@ -22,6 +24,8 @@ export class Mgr {
     this.player = null
     this.SPHERE_RADIUS=0.2
     this.GRAVITY = 30
+    this.npcs=[]
+
   }
   __getVec3(){
     return this.THREE?new this.THREE.Vector3(0,0,0):null
@@ -60,6 +64,11 @@ export class Mgr {
   }
   setPlayer(player) {
     this.player = player
+  }
+  addNpc(npc){
+    npc.npcVelocity = new this.THREE.Vector3(0,0,0)
+    npc.inOnFloor = true
+    this.npcs.push(npc)
   }
   showHelper=async function (flag){
 

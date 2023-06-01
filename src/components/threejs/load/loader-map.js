@@ -8,6 +8,7 @@ const map={
     mtl:'mtl',
     svg:'svg',
     tiff:'tiff',
+    pmd:'mmd',
 }
 
 export default map

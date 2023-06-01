@@ -165,6 +165,9 @@ export class CannonMgr extends Mgr {
       this.testPlayerBody(player)
     }
   }
+  addNpc(npc){
+    super.addNpc(npc)
+  }
   showHelper = async function (flag) {
     if (this.Cannon && this.worldCannon) {
       if (!this.cannonDebugger) {

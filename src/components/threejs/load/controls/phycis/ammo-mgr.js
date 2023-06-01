@@ -55,6 +55,9 @@ export class AmmoMgr extends Mgr{
             }
         }
     }
+    addNpc(npc){
+        super.addNpc(npc)
+    }
     update(delatime,extra) {
         super.update(delatime,extra)
     }

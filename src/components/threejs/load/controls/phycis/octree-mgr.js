@@ -61,6 +61,9 @@ export class OctreeMgr extends Mgr {
   setPlayer(player) {
     super.setPlayer(player)
   }
+  addNpc(npc){
+    super.addNpc(npc)
+  }
   showHelper=async function (flag){
     if (!this.octreeHelper&&this.worldOctree){
       this.octreeHelper = this.track(new this.OctreeHelperCls(this.worldOctree))
@@ -126,14 +129,59 @@ export class OctreeMgr extends Mgr {
       }
     }
   }
-  update(delatime,extra) {
-    super.update(delatime,extra)
-    this.updateSpheres(delatime,extra)
+  update(deltaTime,extra) {
+    super.update(deltaTime,extra)
+    this.updateSpheres(deltaTime,extra)
+    this.updateNpc(deltaTime)
+  }
+  updateNpc(deltaTime){
+    for (let i=0;i<this.npcs.length;i++){
+      if (!this.worldOctree){
+        return
+      }
+      let npc=this.npcs[i]
+      let damping = Math.exp(-4 * deltaTime) - 1
+      if (!npc.inOnFloor ) {
+        npc.npcVelocity.y -= this.GRAVITY * deltaTime
+        // small air resistance
+        damping *= 0.1
+      }
+      npc.npcVelocity.addScaledVector(npc.npcVelocity, damping)
+      const deltaPosition = npc.npcVelocity.clone().multiplyScalar(deltaTime)
+      if (deltaPosition != undefined) {
+        npc.collider.translate(deltaPosition)
+      }
+      this.checkCollid(npc)
+      let end = npc.collider.end
+      let start = npc.collider.start
+      let dy = (end.y - start.y) / 2
+      let pp = start.clone().setY(start.y + dy)
+      npc.position.copy(pp)
+    }
+  }
+  checkCollid(npc){
+    const result = this.worldOctree.capsuleIntersect(npc.collider)
+    npc.inOnFloor = false
+    // 地面检测
+    if (result) {
+      npc.inOnFloor = result.normal.y > 0
+      if (!npc.inOnFloor) {
+        npc.npcVelocity.addScaledVector(
+            result.normal,
+            -result.normal.dot(npc.npcVelocity)
+        )
+      }
+      const deltaPosition = result.normal.multiplyScalar(result.depth)
+      npc.collider.translate(deltaPosition)
+    }
   }
   ////////////////////////////////////////
   updateSpheres(deltaTime,extra) {
     let datas = this.colliders
     datas.forEach((data) => {
+      if (!this.worldOctree){
+        return
+      }
       let sphere = data.item
       sphere.collider.center.addScaledVector(sphere.velocity, deltaTime)
 
@@ -154,6 +202,9 @@ export class OctreeMgr extends Mgr {
     this.spheresCollisions()
 
     for (const data of datas) {
+      if (!this.worldOctree){
+        return
+      }
       let sphere = data.item
       sphere.mesh.position.copy(sphere.collider.center)
     }
@@ -173,6 +224,9 @@ export class OctreeMgr extends Mgr {
     // approximation: player = 3 spheres
 
     for (const point of [playerCollider.start, playerCollider.end, center]) {
+      if (!this.worldOctree){
+        return
+      }
       const d2 = point.distanceToSquared(sphere_center)
 
       if (d2 < r2) {
@@ -197,10 +251,20 @@ export class OctreeMgr extends Mgr {
     let datas = this.colliders
     for (let i = 0, length = datas.length; i < length; i++) {
       const s1 = datas[i].item
-
+      if (!this.worldOctree){
+        return
+      }
+      if (!s1.collider||!s1.collider.center){
+        continue
+      }
       for (let j = i + 1; j < length; j++) {
         const s2 = datas[j].item
-
+        if (!this.worldOctree){
+          return
+        }
+        if (!s2.collider||!s2.collider.center){
+          continue
+        }
         const d2 = s1.collider.center.distanceToSquared(s2.collider.center)
         const r = s1.collider.radius + s2.collider.radius
         const r2 = r * r

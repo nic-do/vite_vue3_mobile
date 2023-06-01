@@ -77,7 +77,8 @@ export default {
       loaders: {},
       collision: {},
       collisionModel: {},
-      miniMap: null
+      miniMap: null,
+      audioLoader: null
     }
   },
   created() {
@@ -220,7 +221,7 @@ export default {
               this.controls.dispose()
             }
           }
-
+          this.audioLoader = null
           this.mixer = null
           this.controls = null
           this.scene.background = null
@@ -340,12 +341,18 @@ export default {
         this.camera.updateProjectionMatrix()
       }
     },
+    getVec3() {
+      return new this.THREE.Vector3()
+    },
+    getBox3() {
+      return new this.THREE.Box3()
+    },
     getSize(target) {
       if (!this.box3ForSize) {
-        this.box3ForSize = new this.THREE.Box3()
+        this.box3ForSize = this.getBox3()
       }
       if (!this.v3_ForSize) {
-        this.v3_ForSize = new this.THREE.Vector3()
+        this.v3_ForSize = this.getVec3()
       }
       this.box3ForSize.makeEmpty()
       this.box3ForSize.expandByObject(target)
@@ -354,15 +361,54 @@ export default {
     },
     getSize2(target) {
       if (!this.box3ForSize) {
-        this.box3ForSize = new this.THREE.Box3()
+        this.box3ForSize = this.getBox3()
       }
       if (!this.v3_ForSize) {
-        this.v3_ForSize = new this.THREE.Vector3()
+        this.v3_ForSize = this.getVec3()
       }
       this.box3ForSize.makeEmpty()
       this.box3ForSize.setFromObject(target)
       this.box3ForSize.getSize(this.v3_ForSize)
       return this.v3_ForSize.clone()
+    },
+    createAudio(isPositonAudio) {
+      const listener = new this.THREE.AudioListener()
+      this.track(listener)
+      let audio = null
+      if (isPositonAudio) {
+        audio = new this.THREE.PositionalAudio(listener)
+      } else {
+        audio = new this.THREE.Audio(listener)
+      }
+      this.track(audio)
+      return audio
+    },
+    loadAudioFile(audioFile, callback) {
+      if (!audioFile || !callback) {
+        return
+      }
+      const onProgress = function (xhr) {
+        if (xhr.lengthComputable) {
+          const percentComplete = (xhr.loaded / xhr.total) * 100
+          console.log(Math.round(percentComplete, 2) + '% downloaded')
+        }
+      }
+      if (!this.audioLoader) {
+        this.audioLoader = new this.THREE.AudioLoader()
+        this.track(this.audioLoader)
+      }
+      if (this.audioLoader) {
+        this.audioLoader.load(
+          audioFile,
+          (buffer) => {
+            if (callback) {
+              callback(buffer)
+            }
+          },
+          onProgress,
+          null
+        )
+      }
     },
     createCamera() {
       // 创建一个camera用来观看场景里的内容,Three.js提供多种相机，
@@ -733,7 +779,7 @@ export default {
       return null
     },
     testTarget(target) {
-      var worldPosition = new this.THREE.Vector3()
+      var worldPosition = this.getVec3()
       target.getWorldPosition(worldPosition)
       console.log('--WorldPosition--', worldPosition)
       target.getWorldScale(worldPosition) //不准，模型有关
