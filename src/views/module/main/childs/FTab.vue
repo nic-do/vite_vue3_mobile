@@ -251,7 +251,8 @@ export default {
               data: { userId: '123' }
           }
       } else if (val.title == 'testthree') {
-          name='test_threejs_load'
+         name='test_threejs_load'
+          // name='testthree'
       }
 
       if (name) {

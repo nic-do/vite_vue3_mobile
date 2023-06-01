@@ -18,9 +18,14 @@ import PageRoot, { PageNavDef } from '@/components/page/index'
 import { useChildren, useParent } from '@vant/use'
 import loaderMap from '@/components/threejs/load/loader-map'
 import threejsLoad from '@/components/threejs/threejs-load.vue'
+
+import { CannonMgr } from '@/components/threejs/load/controls/phycis/cannon-mgr'
+import { OctreeMgr } from '@/components/threejs/load/controls/phycis/octree-mgr'
+
+import { toRaw } from '@vue/reactivity'
+import JoyStick from '@/components/threejs/joy-stick/joy-stick.vue'
 const props = defineProps(['relationKey'])
-// const { proxy } = getCurrentInstance() //用来获取全局变量用；proxy
-// const router = useRouter()
+
 ////////////////////////////////////
 const { parent } = useParent(props.relationKey)
 //通过parent调用父组件通过linkChildren提供数据和方法
@@ -48,8 +53,15 @@ const navDef = reactive({
     leftText: computed(() => {
       return i18n_t('main.nav.leftText')
     }),
+    rightText: computed(() => {
+      return '切换模型'
+    }),
     clickLeft: function () {
       return true
+    },
+    clickRight: function () {
+      showActionSheet.value = !showActionSheet.value
+      return false
     }
   })
 })
@@ -72,12 +84,14 @@ const releaseAll = function () {
       modelAnimate.clear()
     }
   }
+  groundPlane = null
   modelAnimate = null
-  loaders = {}
   actionsTotal = null
   face = null
   previousAction = null
   activeAction = null
+  api = null
+  cameraTarget = null
 }
 const modules = ref([])
 nextTick(() => {
@@ -105,9 +119,6 @@ const onSelected = (action) => {
     module.data = dd
   }
 }
-const click = function () {
-  showActionSheet.value = !showActionSheet.value
-}
 const module = reactive({
   data: {
     file: '/modules/gltf/RobotExpressive.glb',
@@ -119,11 +130,11 @@ const threejsLoadRef = ref('threejsLoadRef')
 const showActionSheet = ref(false)
 const setScene = function (scene, THREE) {
   scene.background = new THREE.Color(0x72645b)
-  if (module.data.mode == 'fbx') {
-    scene.fog = new THREE.Fog(0xe0e0e0, 200, 1000)
-  } else {
-    scene.fog = new THREE.Fog(0xe0e0e0, 10, 50)
-  }
+  // if (module.data.mode == 'fbx') {
+  //   scene.fog = new THREE.Fog(0xe0e0e0, 200, 1000)
+  // } else {
+  //   scene.fog = new THREE.Fog(0xe0e0e0, 10, 50)
+  // }
 }
 let cameraTarget = null
 const setCamera = function (camera, THREE) {
@@ -165,199 +176,468 @@ const setLight = function (light, THREE) {
     })
   }
 }
+let groundPlane = null
 const setGround = function (ground, THREE) {
   ground.grid = null
+  ground.ground = null
+  // groundPlane = ground.ground
 }
-const setRender = function (render, THREE) {
-  let ctrls = threejsLoadRef.value.createOrbitControls(render.domElement)
-  if (module.data.mode == 'fbx') {
-    ctrls.target.set(0, 50, 0)
-  } else if (module.data.mode == 'stl') {
-    ctrls.target.set(0, 0, 0)
-  } else {
-    ctrls.target.set(0, 0.5, 0)
+let controls = null
+const setPlayer = function (player) {
+  if (controls && (controls.type == 'first' || controls.type == 'third')) {
+    controls.setPlayer(player)
+    controls.setEnable(player != null)
   }
 }
-const setAnimate = function (delta, camera, scene, THREE) {
-  if (module.data.mode == 'collada') {
-    if (delta && modelAnimate) {
-      modelAnimate.rotation.z += delta * 0.5
+const setRender = function (render, THREE) {
+  let controlsType = 'third' //first third or null
+  let ctrls = threejsLoadRef.value.createOrbitControls(render.domElement, controlsType)
+  controls = ctrls
+  if (ctrls) {
+    if (!ctrls.type) {
+      if (module.data.mode == 'fbx') {
+        ctrls.target.set(0, 50, 0)
+      } else if (module.data.mode == 'stl') {
+        ctrls.target.set(0, 0, 0)
+      } else {
+        ctrls.target.set(0, 0.5, 0)
+      }
     }
-  } else if (cameraTarget && (module.data.mode == 'stl' || module.data.mode == 'ply')) {
-    const timer = Date.now() * 0.0005
-    camera.position.x = Math.cos(timer) * 6
-    camera.position.z = Math.sin(timer) * 6
-    camera.lookAt(cameraTarget)
   }
 }
 
+const setAnimate = function (delta, camera, scene, THREE) {
+  // if (cameraTarget && (module.data.mode == 'stl' || module.data.mode == 'ply')) {
+  //   const timer = Date.now() * 0.0005
+  //   camera.position.x = Math.cos(timer) * 6
+  //   camera.position.z = Math.sin(timer) * 6
+  //   camera.lookAt(cameraTarget)
+  // }
+}
+
 let modelAnimate = null
-let loaders = {}
-const getLoader = async (com, mode) => {
-  if (loaders[mode] == null) {
-    let Loader = await com.getLoader(mode)
-    if (Loader) {
-      loaders[mode] = new Loader()
+const setLoadModule2 = function (scene, THREE) {
+  return setLoadModule(scene, THREE)
+  // return false
+}
+let Capsule = null
+
+const makePlayer = async function (com, obj, callback) {
+  if (!Capsule) {
+    let res = await com.getCollisionModel('capsule')
+    Capsule = res.Capsule
+  }
+  if (Capsule !== undefined) {
+    let objSize = com.getSize(obj)
+    //刚好能包围模型 x/z 宽度的 球半径
+    let radius = 0.66
+    //gltf模型显示高度是 2.22
+    let playerH = 2.22 //
+    let flag = false
+    if (objSize.y < 4 && objSize.y > radius * 2) {
+      //假设这个范围的size是正确的
+        let mx= Math.max(objSize.x,objSize.z)
+      flag = true
+        radius = mx/2
+      playerH = objSize.y
+    }else if (objSize.y<radius * 2){
+       let mx= Math.max(objSize.x,objSize.z)
+        radius = mx/2
+        flag = true
+        playerH = objSize.y
+    }
+    //Capsule高度 0.66*2+0.9
+    let yy = playerH - 2 * radius
+    //Capsul是上下两个半球+中间一个圆柱
+    //这里半球球心的y轴 分别为0.66 和 0.66+yy
+    //圆柱的底部y轴是 0.66 顶部是 0.66+yy
+    //因此实际需要按模型调整，
+    let start = new com.THREE.Vector3(0, 0, 0)
+    let end = new com.THREE.Vector3(0, yy, 0)
+
+    let collider = com.track(new Capsule(start, end, radius))
+    collider.myname = 'player-collider'
+    let player = null
+    ///////////////////////////////////////////////////////////////////////////////
+    // 带网格 有的模型获取不准确 调整位置 观察用
+    //cannon不需要额外的 线框
+    // const geometry = com.track(new com.THREE.CapsuleGeometry(radius, yy, 4, 8))
+    // geometry.myname = 'player-geometry'
+    // const material = com.track(
+    //   new com.THREE.MeshBasicMaterial({
+    //     color: 0xff0000,
+    //     // opacity: 0,
+    //     alphaTest: 1,
+    //     wireframe: true
+    //   })
+    // )
+    // material.myname = 'player-material'
+    // player = com.track(new com.THREE.Mesh(geometry, material))
+    // 不带网格
+    player = com.track(new com.THREE.Mesh())
+    ///////////////////////////////////////////////////////////////////////
+    player.myname = 'player'
+    // player.position.copy(end.clone().setY(end.y / 2 + radius))
+    player.add(obj)
+    player.player = obj
+    player.collider = collider
+    //这里模型 为什么带个 相对的偏移，可能是相对的中心的问题
+    //-1.07比 1/2的Capsule（-1.11）高看着更合适，？？？这里具体不太理解
+    //大概的可能是因为模型2.22这个值是 估算的 不准确导致的
+    if (flag) {
+      player.player.position.y = -playerH / 2
+    } else {
+      player.player.position.y = -1.07 //2.14
+    }
+    player.centerY = playerH / 2
+    callback(player)
+    if (octreeMgr != null) {
+      octreeMgr.setPlayer(player)
+    }
+    if (cannonMgr != null) {
+      cannonMgr.setPlayer(player)
     }
   }
-  return loaders[mode]
 }
+let octreeMgr = null
+let cannonMgr = null
+const initPhycisMgr = async function (com, type) {
+  if (type == 0) {
+    if (cannonMgr != null) {
+      cannonMgr.clear()
+      cannonMgr.setCom(com)
+    } else {
+      cannonMgr = new CannonMgr(com)
+    }
+    await cannonMgr.useMgr()
+    controls.setPhycisMgr(cannonMgr)
+  } else {
+    if (octreeMgr != null) {
+      octreeMgr.clear()
+      octreeMgr.setCom(com)
+    } else {
+      octreeMgr = new OctreeMgr(com)
+    }
+    await octreeMgr.useMgr()
+    controls.setPhycisMgr(octreeMgr)
+  }
+}
+
 const setLoadModule = async function (scene, THREE) {
   let com = threejsLoadRef.value
   if (com) {
     let mode = module.data.mode
     let file = module.data.file
-    let mLoader = await getLoader(com, mode)
-    if (!mLoader) {
-      return null
-    }
-      const onProgress = function (xhr) {
-          if (xhr.lengthComputable) {
-              const percentComplete = (xhr.loaded / xhr.total) * 100
-              console.log(Math.round(percentComplete, 2) + '% downloaded')
-          }
-      }
+    await initPhycisMgr(com, 1)
 
-      const loadModule = (file, materials, resolve) => {
+    const onProgress = function (xhr) {
+      if (xhr.lengthComputable) {
+        const percentComplete = (xhr.loaded / xhr.total) * 100
+        console.log(Math.round(percentComplete, 2) + '% downloaded')
+      }
+    }
+    const getLoader = async (file, materials) => {
+      let suffix = file.split('.')[1]
+      let loaderMode = loaderMap[suffix]
+      if (!loaderMode) {
+        loaderMode = suffix
+      }
+      let mLoader = await com.getLoader(loaderMode)
+      if (!mLoader) {
+        return null
+      }
       if (materials) {
         if (mLoader.setMaterials != undefined) {
           mLoader.setMaterials(materials)
         }
       }
-      if (Array.isArray(file)) {
-        for (let i = 0; i < file.length; i++) {
-          let item = file[i]
-          mLoader.load(
-            item,
-            (obj) => {
-              resolve(obj, item)
-            },
-            onProgress
-          )
-        }
-      } else {
+      return mLoader
+    }
+    const doLoad = async function (mLoader, file) {
+      return new Promise(function (resolve) {
         mLoader.load(
           file,
           (obj) => {
-            resolve(obj, file)
+            resolve(obj)
           },
           onProgress
         )
+      })
+    }
+    const loadModule = async (file, materials, resolve, resolveall) => {
+      let allItems = []
+      if (Array.isArray(file)) {
+        for (let i = 0; i < file.length; i++) {
+          let item = file[i]
+          let mLoader = await getLoader(item, materials)
+          if (!mLoader) {
+            if (resolve) resolve(null, file)
+          } else {
+            let obj = await doLoad(mLoader, item).catch((e) => {})
+            if (resolveall) {
+              allItems.push({ file: item, obj: obj })
+            }
+            if (resolve) resolve(obj, item)
+          }
+        }
+        if (resolveall) {
+          resolveall(allItems)
+        }
+      } else {
+        let mLoader = await getLoader(file, materials)
+        if (!mLoader) {
+          if (resolve) resolve(null, file)
+          return
+        }
+        let obj = await doLoad(mLoader, file).catch((e) => {})
+        if (resolve) resolve(obj, obj)
+        if (resolveall) {
+          allItems.push({ file: file, obj: obj })
+          resolveall(allItems)
+        }
       }
     }
-    if (mode == 'obj') {
-      let mtlLoader = await getLoader(com, 'mtl')
-      if (!mtlLoader) {
-        return null
+    loadModule('/modules/gltf/collision-world.glb', null, (obj, item) => {
+      if (!obj) {
+        console.log('loadModule', item + '--get failed')
+        return
       }
-      mtlLoader.load('/modules/obj/male02/male02.mtl', function (materials) {
+      let wrap = com.track(obj.scene)
+      wrap.myname = 'world-scene'
+      scene.add(wrap)
+      // let world = groundPlane
+      if (cannonMgr != null) {
+        cannonMgr.setWorld(wrap)
+        cannonMgr.showHelper(true)
+      }
+      if (octreeMgr != null) {
+        octreeMgr.setWorld(wrap)
+        octreeMgr.showHelper(true)
+      }
+      wrap.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+          if (child.material.map) {
+            child.material.map.anisotropy = 4
+          }
+        }
+      })
+    })
+    if (mode == 'obj') {
+      loadModule('/modules/obj/male02/male02.mtl', null, (materials, item) => {
+        if (!materials) {
+          console.log('loadModule', item + '--get failed')
+          return
+        }
         materials.preload()
         loadModule(file, materials, (obj, item) => {
+          if (!obj) {
+            console.log('loadModule', item + '--get failed')
+            return
+          }
           obj.scale.multiplyScalar(0.015)
-          scene.add(com.track(obj))
+          obj.myname = 'mtl-obj'
+          let wrap = com.track(obj)
+          // scene.add(wrap)
+          makePlayer(com, wrap, (player) => {
+            scene.add(player)
+            setPlayer(player)
+            com.setMiniMap(player)
+          })
         })
       })
       return true
     } else {
-      loadModule(file, null, (obj, item) => {
-        if (mode == 'gltf') {
-          obj.scene.scale.multiplyScalar(0.5)
-          scene.add(com.track(obj.scene))
-          createGUI(com, THREE, obj.scene, obj.animations)
-        } else if (mode == 'fbx') {
-          scene.add(com.track(obj))
-          const action = com.setMixer(obj, obj.animations[0])
-          obj.traverse(function (child) {
-            if (child.isMesh) {
-              child.castShadow = true
-              child.receiveShadow = true
+      loadModule(
+        file,
+        null,
+        (obj, item) => {
+          if (!obj) {
+            console.log('loadModule', item + '--get failed')
+            return
+          }
+          if (mode == 'gltf') {
+            let wrap = com.track(obj.scene)
+            wrap.myname = 'gltf-scene'
+            wrap.scale.multiplyScalar(0.5)
+            makePlayer(com, wrap, (player) => {
+              scene.add(player)
+              setPlayer(player)
+              com.setMiniMap(player)
+            })
+            wrap.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true
+                child.receiveShadow = true
+                if (child.material.map) {
+                  child.material.map.anisotropy = 4
+                }
+              }
+            })
+            if (controls && controls.type == 'first') {
+              controls.setEnable(true)
             }
-          })
-          if (action) {
-            action.play()
+            createGUI(com, THREE, wrap, obj.animations)
+            obj = null
+          } else if (mode == 'fbx') {
+            scene.add(com.track(obj))
+            obj.myname = 'fbx-obj'
+            const action = com.setMixer(obj, obj.animations[0])
+            obj.traverse(function (child) {
+              if (child.isMesh) {
+                child.castShadow = true
+                child.receiveShadow = true
+              }
+            })
+            if (action) {
+              action.play()
+            }
+          } else if (mode == 'collada') {
+            obj.scene.scale.multiplyScalar(0.5)
+            modelAnimate = obj.scene
+            obj.scene.myname = 'collada-scene'
+            let wrap = com.track(obj.scene)
+            // scene.add(wrap)
+            makePlayer(com, wrap, (player) => {
+              scene.add(player)
+              player.axisy_z = true
+              setPlayer(player)
+              com.setMiniMap(player)
+            })
+          } else if (mode == 'stl') {
+            // let mesh = makeStl(com,THREE,item, obj)
+            // scene.add(mesh)
+          } else if (mode == 'ply') {
+            // let mesh = makePly(com, THREE, item, obj)
+            // scene.add(mesh)
           }
-        } else if (mode == 'collada') {
-          obj.scene.scale.multiplyScalar(0.5)
-          modelAnimate = obj.scene
-          scene.add(com.track(obj.scene))
-        } else if (mode == 'stl') {
-          let mesh = null
-          if (item.indexOf('slotted_disk.stl') > 0) {
-            let material = com.track(
-              new THREE.MeshPhongMaterial({
-                color: 0xff9c7c,
-                specular: 0x494949,
-                shininess: 200
+        },
+        (all) => {
+          if (all && all.length > 0) {
+            if (mode == 'stl' || mode == 'ply') {
+              let flag = false
+              let group = com.track(new com.THREE.Mesh())
+              all.forEach((it) => {
+                let mesh = null
+                if (mode == 'stl') {
+                  mesh = makeStl(com, THREE, it.file, it.obj)
+                } else if (mode == 'ply') {
+                  mesh = makePly(com, THREE, it.file, it.obj)
+                }
+                if (mesh) {
+                  flag = true
+                  group.add(mesh)
+                }
               })
-            )
-            let fact = 1
-            mesh = new THREE.Mesh(obj, material)
-            mesh.position.set(0, 0.5 * fact, 0)
-            mesh.rotation.set(0, -Math.PI / 2, 0)
-            mesh.scale.set(fact, fact, fact)
-
-            mesh.castShadow = true
-            mesh.receiveShadow = true
-          } else if (item.indexOf('pr2_head_pan.stl') > 0) {
-            let fact = 1
-            let material = com.track(
-              new THREE.MeshPhongMaterial({
-                color: 0xd5d5d5,
-                specular: 0x494949,
-                shininess: 200
-              })
-            )
-            mesh = new THREE.Mesh(obj, material)
-            mesh.position.set(0, 0.065 * fact, -0.6)
-            mesh.rotation.set(-Math.PI / 2, 0, 0)
-            mesh.scale.set(fact, fact, fact)
-
-            mesh.castShadow = true
-            mesh.receiveShadow = true
+              if (flag) {
+                makePlayer(com, group, (player) => {
+                  scene.add(player)
+                  setPlayer(player)
+                  com.setMiniMap(player)
+                })
+              }
+            }
           }
-          mesh.scale.multiplyScalar(0.5)
-          scene.add(com.track(mesh))
-        } else if (mode == 'ply') {
-          obj.computeVertexNormals()
-          const material = com.track(
-            new THREE.MeshStandardMaterial({ color: 0x009cff, flatShading: true })
-          )
-          const mesh = new THREE.Mesh(obj, material)
-          let size = com.getSize(mesh)
-          let factor = 0
-          if (item.indexOf('dolphins.ply') > 0) {
-            factor = 0.001 * 3
-            mesh.position.z = 0.3
-            mesh.rotation.x = -Math.PI / 2
-            mesh.scale.multiplyScalar(factor)
-            mesh.position.y = (size.y * factor) / 2 + 0.19
-          } else if (item.indexOf('Lucy100k.ply') > 0) {
-            factor = 0.0006 * 3
-            mesh.position.x = -0.2
-            mesh.position.z = -0.2
-            mesh.scale.multiplyScalar(factor)
-            mesh.position.y = (size.y * factor) / 2
-          }
-          mesh.castShadow = true
-          mesh.receiveShadow = true
-          scene.add(com.track(mesh))
+          all.splice(0, all.length)
         }
-      })
+      )
       return true
     }
   }
   return false
 }
+const makePly = function (com, THREE, item, obj) {
+  obj.computeVertexNormals()
+  const material = com.track(new THREE.MeshStandardMaterial({ color: 0x009cff, flatShading: true }))
+  material.myname = 'ply-material'
+  const mesh = new THREE.Mesh(obj, material)
+  mesh.myname = 'ply-mesh'
+  let size = com.getSize(mesh)
+  let factor = 0
+  if (item.indexOf('dolphins.ply') > 0) {
+    factor = 0.001 * 3
+    mesh.position.z = 0.3
+    mesh.scale.multiplyScalar(factor)
+      mesh.position.y = (size.y * factor) / 2 + 0.28
+      mesh.position.z = -0.5
+      mesh.position.x = -0.1
+      mesh.rotation.x = Math.PI / 2
+      mesh.rotation.y = Math.PI
+  } else if (item.indexOf('Lucy100k.ply') > 0) {
+    factor = 0.0006 * 3
+    mesh.scale.multiplyScalar(factor)
+    mesh.position.y = (size.y * factor) / 2
+    mesh.rotation.y = Math.PI
 
+      mesh.position.z += 0.4
+  }
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+
+  return com.track(mesh)
+}
+const makeStl = function (com, THREE, item, obj) {
+  let mesh = null
+  if (item.indexOf('slotted_disk.stl') > 0) {
+    let material = com.track(
+      new THREE.MeshPhongMaterial({
+        color: 0xff9c7c,
+        specular: 0x494949,
+        shininess: 200
+      })
+    )
+    material.myname = 'stl-material'
+    let fact = 1
+    mesh = new THREE.Mesh(obj, material)
+    mesh.myname = 'stl-mesh'
+    mesh.position.set(0, 0.5 * fact, 0)
+    mesh.rotation.set(0, -Math.PI / 2, 0)
+    mesh.scale.set(fact, fact, fact)
+
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+  } else if (item.indexOf('pr2_head_pan.stl') > 0) {
+    let fact = 1
+    let material = com.track(
+      new THREE.MeshPhongMaterial({
+        color: 0xd5d5d5,
+        specular: 0x494949,
+        shininess: 200
+      })
+    )
+    material.myname = 'stl-material'
+    mesh = new THREE.Mesh(obj, material)
+    mesh.myname = 'stl-mesh'
+    mesh.position.set(0, 0.065 * fact, -0.6)
+    mesh.rotation.set(-Math.PI / 2, 0, 0)
+    mesh.scale.set(fact, fact, fact)
+
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+  }
+  if (mesh) {
+    mesh.scale.multiplyScalar(0.5)
+    com.track(mesh)
+  }
+  return mesh
+}
 let actionsTotal = null
 let api = { state: 'Walking' }
 let face = null
 let previousAction = null
 let activeAction = null
-const createGUI = function (com, THREE, model, animations) {
+const createGUI = async function (com, THREE, model, animations) {
   const states = ['Idle', 'Walking', 'Running', 'Dance', 'Death', 'Sitting', 'Standing']
   const emotes = ['Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp']
+  await com.getGui()
   com.gui = com.track(new com.GUI())
+  com.gui.domElement.style.top = '88px' //可以调整位置
+  com.gui.domElement.style.left = '0px' //可以调整位置
+  com.gui.add({ debug: false }, 'debug').onChange(function (value) {
+    if (octreeMgr && octreeMgr.octreeHelper) octreeMgr.octreeHelper.visible = value
+  })
+
   let mixer = com.track(new THREE.AnimationMixer(model))
   com.mixer = mixer
   let actions = {}
@@ -398,12 +678,6 @@ const createGUI = function (com, THREE, model, animations) {
     emoteFolder.add(api, name)
   }
 
-  function restoreState() {
-    mixer.removeEventListener('finished', restoreState)
-
-    fadeToAction(api.state, 0.2)
-  }
-
   for (let i = 0; i < emotes.length; i++) {
     createEmoteCallback(emotes[i])
   }
@@ -427,6 +701,11 @@ const createGUI = function (com, THREE, model, animations) {
   expressionFolder.open() //子面板打开
   //   expressionFolder.close()
 }
+function restoreState() {
+  threejsLoadRef.value.mixer.removeEventListener('finished', restoreState)
+
+  fadeToAction(api.state, 0.2)
+}
 const fadeToAction = function (name, duration) {
   previousAction = activeAction
   activeAction = actionsTotal[name]
@@ -435,6 +714,81 @@ const fadeToAction = function (name, duration) {
   }
 
   activeAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play()
+}
+const jump = function () {
+  if (controls) {
+    controls.joyStickJump(() => {
+      //jump 动画本身 有高度变化，跟碰撞不一致，以后再试
+      // fadeToAction('Jump', 0.2)
+      // threejsLoadRef.value.mixer.addEventListener('finished', restoreState)
+    })
+  }
+}
+const shoot = function (val) {
+  let mixer = threejsLoadRef.value.mixer
+  if (val == '0') {
+    // fadeToAction('Punch', 0.2)
+    controls.shoot()
+  } else if (val == '1') {
+    fadeToAction('Running', 0.2)
+  } else if (val == '2') {
+    fadeToAction('Walking', 0.2)
+  } else if (val == '3') {
+    fadeToAction('WalkJump', 0.2)
+  } else if (val == '5') {
+    controls.changeType()
+  }
+  //   fadeToAction('Idle',0.2)
+  if (mixer) mixer.addEventListener('finished', restoreState)
+}
+
+let lastKey = null
+const getRad = function (val) {
+  let rad = val.rad
+  let nKey = null
+  let keyCode = null
+  if (rad < Math.PI / 4 && rad >= -Math.PI / 4) {
+    //right
+    nKey = 'KeyD'
+    keyCode = 68
+  } else if (rad >= Math.PI / 4 && rad <= (Math.PI * 3) / 4) {
+    //top
+    nKey = 'KeyW'
+    keyCode = 87
+  } else if (rad > (Math.PI * 3) / 4 || rad <= -(Math.PI * 3) / 4) {
+    //left
+    nKey = 'KeyA'
+    keyCode = 65
+  } else if (rad > -(Math.PI * 3) / 4 && rad < -Math.PI / 4) {
+    //bottom
+    nKey = 'KeyS'
+    keyCode = 83
+  }
+  if (controls) {
+    if (controls.type == 'third') {
+      if (rad != undefined) {
+        if (Math.abs(rad) > 0.01) {
+          controls.joyStickChange(rad)
+        }
+      }
+      if (val.finished) {
+        controls.joyStickChange(-1000)
+      }
+    } else {
+      if (!lastKey || lastKey.nKey != nKey) {
+        if (lastKey) {
+          controls.onKeyUp({ code: lastKey.nKey, keyCode: lastKey.keyCode })
+        }
+      }
+      if (val.finished) {
+        lastKey = null
+        controls.onKeyUp({ code: nKey, keyCode: keyCode })
+      } else {
+        controls.onKeyDown({ code: nKey, keyCode: keyCode })
+        lastKey = { nKey: nKey, keyCode: keyCode }
+      }
+    }
+  }
 }
 </script>
 <template>
@@ -454,13 +808,10 @@ const fadeToAction = function (name, duration) {
         :setGround="setGround"
         :setRender="setRender"
         :setAnimate="setAnimate"
-        :setLoadModule="setLoadModule"
-        :showControls="true"
+        :setLoadModule="setLoadModule2"
+        :show-stats="true"
+        :showControls="false"
       />
-
-      <van-button style="position: fixed; top: 100px; z-index: 10000" type="primary" @click="click"
-        >change-module</van-button
-      >
 
       <van-action-sheet
         v-model:show="showActionSheet"
@@ -469,11 +820,11 @@ const fadeToAction = function (name, duration) {
         description="模型切换"
         @select="onSelected"
       />
+
+      <joy-stick :get-rad="getRad" :jump="jump" :shoot="shoot"></joy-stick>
     </template>
   </page-root>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>
 <style lang="scss" scoped></style>

@@ -14,6 +14,7 @@
     "@faker-js/faker": "^8.0.0",
     "axios": "^1.4.0",
     "can-i-ignore-scripts": "^0.1.9",
+    "cannon-es-debugger": "^1.0.0",
     "compressorjs": "^1.2.1",
     "cssnano": "^6.0.0",
     "cssnano-preset-advanced": "^6.0.0",

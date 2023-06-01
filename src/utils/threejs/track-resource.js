@@ -1,13 +1,18 @@
-import * as THREE from 'three'
+import Is from '@/utils/is'
 export default class ResourceTracker {
   constructor() {
+    this.source_track = new Set()
     this.resources = new Set()
   }
   track(resource) {
+    this.source_track.add(resource)
+    return resource
+  }
+  __track(resource,THREE) {
     if (!resource) {
       return resource
     }
-    let flag = ''
+    let flag = false
     // handle children and when material is an array of materials or
     // uniform is array of textures
     if (Array.isArray(resource)) {
@@ -15,7 +20,16 @@ export default class ResourceTracker {
       return resource
     }
 
-    if (resource.dispose || resource instanceof THREE.Object3D) {
+    if (resource.dispose&&Is.isFunction(resource.dispose)) {
+      this.resources.add(resource)
+      flag = true
+    }else if (resource.clear&&Is.isFunction(resource.clear)) {
+      this.resources.add(resource)
+      flag = true
+    }else if (resource.destroy&&Is.isFunction(resource.destroy)) {
+      this.resources.add(resource)
+      flag = true
+    } else if (resource instanceof THREE.Object3D) {
       this.resources.add(resource)
       flag = true
     }
@@ -28,6 +42,14 @@ export default class ResourceTracker {
       for (const value of Object.values(resource)) {
         if (value instanceof THREE.Texture) {
           this.track(value)
+        } else if (value != undefined && value != null) {
+          try {
+            if (value.children != undefined && Array.isArray(value.children)) {
+              this.track(value.children)
+            } else if (value.dispose || value.clear || value.destroy) {
+              this.track(value)
+            }
+          } catch (e) {}
         }
       }
       // We also have to check if any uniforms reference textures or arrays of textures
@@ -41,49 +63,105 @@ export default class ResourceTracker {
           }
         }
       }
+    } else {
+      for (const value of Object.values(resource)) {
+        if (value != undefined && value != null) {
+          try {
+            if (value.children != undefined && Array.isArray(value.children)) {
+              this.track(value.children)
+            } else if (value.dispose || value.clear || value.destroy) {
+              this.track(value)
+            }
+          } catch (e) {}
+        }
+      }
     }
     if (!flag) {
-      console.log('--not track--', resource.type)
+      console.log(
+        '--not track--',
+        resource.uuid + '---' + resource.type + '--myname:' + resource.myname
+      )
     }
     return resource
   }
   untrack(resource) {
-    this.resources.delete(resource)
+    this.source_track.delete(resource)
   }
   //只管理了两类实例：1、Object3D实例，2、含dispose() （这里面可能两者都是）
-  dispose() {
+  dispose(THREE) {
+    // for (let i = 0; i < this.source_track.length; i++) { let obj = this.source_track[i]
+    for (const obj of this.source_track) {
+      this.__track(obj,THREE)
+    }
+    this.source_track = []
+    let op = null
+    console.log('--res-dispose-count--', this.resources.size)
     for (const resource of this.resources) {
       if (resource instanceof THREE.Object3D) {
-       // this.traverse(resource)
+        // this.traverse(resource)
         if (resource.parent) {
           resource.parent.remove(resource)
         }
       }
-      if (resource.dispose) {
+      op = null
+      if (resource.dispose&&Is.isFunction(resource.dispose)) {
+        op = ' dispose'
         resource.dispose()
       }
-      if (resource.clear) {
+      if (resource.clear&&Is.isFunction(resource.clear)) {
+        op = ' clear'
         resource.clear()
       }
-      if (resource.destroy) {
+      if (resource.destroy&&Is.isFunction(resource.destroy)) {
+        op = ' destroy'
         resource.destroy()
       }
+      // if (resource.myname) {
+      //   console.error(
+      //     'res-dispose-op',
+      //     'uuid:' + resource.uuid + '--' + op + '--' + resource.type + '--myname:' + resource.myname
+      //   )
+      // } else {
+      //   console.log(
+      //     'res-dispose-op',
+      //     'uuid:' + resource.uuid + '--' + op + '--' + resource.type + '--myname:' + resource.myname
+      //   )
+      // }
     }
     this.resources.clear()
   }
-  clearRender(render){
+  clearRender(render, logTag) {
     if (render) {
-      render.dispose()
+      if (render.info.programs && render.info.programs) {
+        // 注：render.info.programs一直无法消除
+        // 看源码，deallocateMaterial时会destroy相关program
+        // 因此这里强制destroy，也没报错（是否有其他影响有待验证）
+        let programs = render.info.programs
+        for (let i = programs.length - 1; i >= 0; i--) {
+          let program = programs[i]
+          program.destroy()
+        }
+        render.info.programs.splice(0, programs.length)
+      }
       render.forceContextLoss()
+      render.dispose()
+
       let gl = render.domElement.getContext('webgl')
       gl && gl.getExtension('WEBGL_lose_context').loseContext()
-      let node=render.domElement.parentNode
-      if (node){
+      let node = render.domElement.parentNode
+      if (node) {
         node.removeChild(render.domElement)
       }
+      render.context = null
+      render.domElement = null
+      render.dom = null
       // canvas.value.removeChild(render.domElement)
-      console.log('查看memery字段即可', render.info) //查看memery字段即可
+      this.logRenderInfo(render, logTag)
     }
+  }
+  logRenderInfo(render, logTag) {
+    render.info.reset()
+    console.log((logTag != undefined ? `${logTag}:` : '') + '查看memery字段即可', render.info) //查看memery字段即可
   }
   // traverse(object3D) {
   //   object3D.traverse((child) => {
