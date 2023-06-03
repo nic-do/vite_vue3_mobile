@@ -1,12 +1,14 @@
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer'
 // 创建一个HTML标签
-function tag(name) {
+function tag2D(name) {
   // 创建div元素(作为标签)
   var div = document.createElement('div')
   div.innerHTML = name
   div.classList.add('tag')
   //div元素包装为CSS2模型对象CSS2DObject
   var label = new CSS2DObject(div)
+  label.myname='CSS2DObject'
+  div.style.fontSize='11px'
   div.style.pointerEvents = 'none' //避免HTML标签遮挡三维场景的鼠标事件
   // 设置HTML元素标签在three.js世界坐标中位置
   // label.position.set(x, y, z);
@@ -16,6 +18,7 @@ function tag(name) {
 // 创建一个CSS2渲染器CSS2DRenderer
 function labelRenderer(container) {
   var labelRenderer = new CSS2DRenderer()
+  labelRenderer.myname='CSS2DRenderer'
   labelRenderer.setSize(container.offsetWidth, container.offsetHeight)
   labelRenderer.domElement.style.position = 'absolute'
   // 相对标签原位置位置偏移大小
@@ -27,4 +30,4 @@ function labelRenderer(container) {
   return labelRenderer
 }
 
-export { tag, labelRenderer }
+export { tag2D, labelRenderer }

@@ -3,18 +3,23 @@
 </template>
 
 <script>
-import { isRef, nextTick, ref, isReactive } from 'vue'
-import { toRaw } from '@vue/reactivity'
+import { nextTick, ref, markRaw } from 'vue'
 import { MiniMap } from '@/components/threejs/mini-map/mini-map'
 import Stats from 'three/addons/libs/stats.module'
-import ResourceTracker from '@/utils/threejs/track-resource'
+import ResourceTracker from '@/components/threejs/tools/track-resource'
 import { OrbitControls } from 'three/addons/controls/OrbitControls'
 import { ThirdPersonCameraControl } from '@/components/threejs/load/controls/thirdPersonCameraControl'
 import IS from '@/utils/is'
 import reloadWatch from '@/utils/listener/reload-watch'
 import { DashLinesBoxTool } from '@/components/threejs/tools/dash-lines-box-tool'
 import { isPromise } from 'vant/es/utils'
-
+import { SkyBox } from '@/components/threejs/tools/sky-box'
+import { tag2D, labelRenderer as labelRenderer2D } from '@/components/threejs/tools/tag/tag2d'
+import {
+  tag3D,
+  tag3DSprite,
+  labelRenderer as labelRenderer3D
+} from '@/components/threejs/tools/tag/tag3d'
 export default {
   name: 'threejs-load',
   props: [
@@ -27,7 +32,9 @@ export default {
     'setLoadModule',
     'setAnimate',
     'showControls',
-    'showStats'
+    'showStats',
+    'showTag',
+    'useLod'
   ],
   setup(props, context) {},
   watch: {
@@ -56,6 +63,16 @@ export default {
           })
         }
       }
+    },
+    showTag: {
+      deep: true,
+      immediate: true,
+      handler(newVal, oldVal) {}
+    },
+    useLod: {
+      deep: true,
+      immediate: true,
+      handler(newVal, oldVal) {}
     }
   },
   data() {
@@ -68,20 +85,27 @@ export default {
       stats: null,
       clock: null,
 
+      lod: null,
       scene: null,
       camera: null,
       renderer: null,
 
       gui: null,
       mixer: null,
-      loaders: {},
-      collision: {},
-      collisionModel: {},
+      loaders: null,
+      collision: null,
+      collisionModel: null,
       miniMap: null,
-      audioLoader: null
+      audioLoader: null,
+      skyBox: null,
+      renderer2D: null,
+      renderer3D: null
     }
   },
   created() {
+    this.loaders = markRaw({})
+    this.collision = markRaw({})
+    this.collisionModel = markRaw({})
     reloadWatch.setListener(() => {
       this.destroyResource()
     })
@@ -100,9 +124,15 @@ export default {
   },
   methods: {
     onWindowResize() {
-      this.camera.aspect = window.innerWidth / window.innerHeight
+      let width = window.innerWidth
+      let height = window.innerHeight
+      this.camera.aspect = width / height
       this.camera.updateProjectionMatrix()
-      this.renderer.setSize(window.innerWidth, window.innerHeight)
+      this.renderer.setSize(width, height)
+      if (this.showTag) {
+        if (this.renderer2D) this.renderer2D.setSize(width, height)
+        if (this.renderer3D) this.renderer3D.setSize(width, height)
+      }
     },
     init() {
       if (!this.initFlag) {
@@ -111,8 +141,11 @@ export default {
         // 在外层定义resMgr和track
         this.resMgr = new ResourceTracker()
         this.setShowStats(this.showStats)
+
         nextTick(async () => {
           await this.getLoad(this.module.mode)
+          this.skyBox = markRaw(new SkyBox(this))
+          this.lod = this.track(new this.THREE.LOD())
           this.initScene()
         })
       }
@@ -174,7 +207,7 @@ export default {
           console.log('--THREE-gui--', err)
         })
         if (libGui.default != undefined) {
-          this.GUI = libGui.default
+          this.GUI = markRaw(libGui.default)
         }
       }
       return this.GUI
@@ -184,6 +217,7 @@ export default {
       //   如果一定要全局保存，destroy时 释放内存后，全部置null，否则似乎有残留
       try {
         window.removeEventListener('resize', this.onWindowResize)
+        this.skyBox = null
         if (this.miniMap) {
           this.miniMap.dispose()
           this.miniMap = null
@@ -221,6 +255,9 @@ export default {
               this.controls.dispose()
             }
           }
+          this.lod = null
+          this.renderer2D = null
+          this.renderer3D = null
           this.audioLoader = null
           this.mixer = null
           this.controls = null
@@ -232,7 +269,7 @@ export default {
           this.gui = null
           this.resMgr = null
           this.GUI = null
-          this.loader = null
+          // this.loader = null
           this.collision = {}
           this.loaders = {}
           this.collisionModel = {}
@@ -254,12 +291,19 @@ export default {
       }
     },
     track(val) {
-      //option 模式下 需要toRaw解包？
-      let res = this.resMgr.track(val)
-      if (isRef(res) || isReactive(res)) {
-        return toRaw(res)
-      }
+      //标记不使用 proxy
+      let res = markRaw(this.resMgr.track(val))
       return res
+    },
+    lodRemove(obj) {
+      if (this.lod) {
+        this.lod.remove(obj)
+      }
+    },
+    lodLevel(obj, distance = 0, hysteresis = 0) {
+      if (this.lod) {
+        this.lod.addLevel(obj, distance, hysteresis)
+      }
     },
     setShowStats(flag) {
       if (!this.stats && flag) {
@@ -278,22 +322,8 @@ export default {
         }
       }
     },
-    animate() {
-      if (this.stopAnimate) {
-        return
-      }
-      /////////////////////////////////////////////////////////////
-      let delta = null
-      if (this.clock) {
-        delta = this.clock.getDelta()
-      }
-      if (IS.isFunction(this.setAnimate)) {
-        this.setAnimate(delta, this.camera, this.scene, this.THREE)
-      }
-      if (delta && this.mixer) {
-        this.mixer.update(delta)
-      }
-
+    async updateControls(delta) {
+      //不阻塞
       if (this.controls) {
         if (this.controls.type) {
           this.controls.update(delta)
@@ -301,12 +331,40 @@ export default {
           this.controls.update()
         }
       }
+    },
+    animate() {
+      if (this.stopAnimate || !this.$refs.canvasRef) {
+        return
+      }
+      /////////////////////////////////////////////////////////////
+      let delta = null
+      if (this.clock) {
+        delta = this.clock.getDelta()
+      }
+
+      if (delta && this.mixer) {
+        this.mixer.update(delta)
+      }
+      if (this.lod) {
+        this.lod.update(this.camera)
+      }
+      this.updateControls(delta)
+      if (IS.isFunction(this.setAnimate)) {
+        this.setAnimate(delta, this.camera, this.scene, this.THREE)
+      }
 
       //////////////////////////////////////////////////////////////////////////////////////
+      if (this.showTag) {
+        if (!this.renderer2D && this.$refs.canvasRef) {
+          this.renderer2D = this.track(labelRenderer2D(this.$refs.canvasRef)) //渲染HTML标签对象 CSS2DObject 标签
+          this.renderer3D = this.track(labelRenderer3D(this.$refs.canvasRef)) //渲染HTML标签对象 CSS3DObject 标签
+        }
+        if (this.renderer2D) this.renderer2D.render(this.scene, this.camera)
+        if (this.renderer3D) this.renderer3D.render(this.scene, this.camera)
+      }
+
       if (this.renderer) {
-        let sceneRaw = toRaw(this.scene)
-        let cameraRaw = toRaw(this.camera)
-        this.renderer.render(sceneRaw, cameraRaw)
+        this.renderer.render(this.scene, this.camera)
 
         if (this.miniMap) {
           this.miniMap.update()
@@ -315,7 +373,7 @@ export default {
       if (this.stats) this.stats.update()
       requestAnimationFrame(this.animate)
 
-      const resizeRendererToDisplaySize = function (renderer) {
+      const resizeRendererToDisplaySize = (renderer) => {
         if (renderer) {
           const canvasEl = renderer.domElement
           var width = window.innerWidth
@@ -330,6 +388,10 @@ export default {
           const needResize = canvasPixelWidth !== width || canvasPixelHeight !== height
           if (needResize) {
             renderer.setSize(width, height, false)
+            if (this.showTag) {
+              if (this.renderer2D) this.renderer2D.setSize(width, height)
+              if (this.renderer3D) this.renderer3D.setSize(width, height)
+            }
           }
           return needResize
         }
@@ -340,6 +402,22 @@ export default {
         this.camera.aspect = canvasEl.width / canvasEl.height //canvasEl.clientWidth / canvasEl.clientHeight
         this.camera.updateProjectionMatrix()
       }
+    },
+    getTag(params) {
+      let tag = null
+      if (params) {
+        let tagname = params.name
+        if (params.type == '3d') {
+          if (params.useSprite) {
+            tag = tag3DSprite(tagname)
+          } else {
+            tag = tag3D(tagname)
+          }
+        } else {
+          tag = tag2D(tagname)
+        }
+      }
+      return tag
     },
     getVec3() {
       return new this.THREE.Vector3()
@@ -394,8 +472,7 @@ export default {
         }
       }
       if (!this.audioLoader) {
-        this.audioLoader = new this.THREE.AudioLoader()
-        this.track(this.audioLoader)
+        this.audioLoader = this.track(new this.THREE.AudioLoader())
       }
       if (this.audioLoader) {
         this.audioLoader.load(
@@ -519,20 +596,20 @@ export default {
           controls.listenToKeyEvents(document)
         }
         this.controlsType = type
-        this.controls = controls
+        this.controls = markRaw(controls)
       }
       return this.controls
     },
     setMixer(target, clipAction) {
       let action = null
       if (target && clipAction) {
-        this.mixer = new this.THREE.AnimationMixer(target)
+        this.mixer = this.track(new this.THREE.AnimationMixer(target))
         action = this.mixer.clipAction(clipAction)
       }
       return action
     },
     async initScene() {
-      this.clock = new this.THREE.Clock()
+      this.clock = markRaw(new this.THREE.Clock())
       //首先为Three.js创建一个scene:
       let scene = this.track(new this.THREE.Scene())
       if (IS.isFunction(this.setScene)) {
@@ -547,7 +624,8 @@ export default {
       }
       /////////////////////////////////
       scene.myname = 'scene-main'
-      this.scene = scene
+      scene.add(this.lod)
+      this.scene = markRaw(scene)
 
       let camera = this.createCamera()
       if (IS.isFunction(this.setCamera)) {
@@ -560,7 +638,7 @@ export default {
           }
         }
       }
-      this.camera = camera
+      this.camera = markRaw(camera)
 
       let ground = this.createGround()
       if (IS.isFunction(this.setGround)) {
@@ -614,14 +692,14 @@ export default {
         let res = this.setRender(renderer)
         if (res != undefined) {
           if (isPromise(res)) {
-            renderer = await res()
+            renderer = await res.catch((e) => {})
           } else {
             renderer = res
           }
         }
       }
       if (renderer) {
-        this.renderer = renderer
+        this.renderer = markRaw(renderer)
         this.$refs.canvasRef.appendChild(renderer.domElement)
 
         if (!this.controls && this.showControls) {
@@ -686,7 +764,7 @@ export default {
       }
     },
     setMiniMap(target) {
-      this.miniMap = new MiniMap({ com: this, target, mapSize: 35, mapRenderSize: 150 })
+      this.miniMap = markRaw(new MiniMap({ com: this, target, mapSize: 35, mapRenderSize: 150 }))
     },
     makeCube(tag, wireframe, color) {
       let material = this.track(
@@ -705,24 +783,29 @@ export default {
       // cube.position.set(0, 0, 0)
       return cube
     },
-    setTestCube(scene) {
+    setAxesHelper(scene,y) {
+      // 创建一个三维坐标轴
+      if (!this.axesHelper) {
+        const axesHelper = this.track(new this.THREE.AxesHelper(3))
+        axesHelper.myname = 'my-axesHelper'
+        axesHelper.position.set(0, y, 0)
+        this.axesHelper = axesHelper
+        // 坐标对象添加到三维场景中
+        scene.add(axesHelper)
+      }
+    },
+    setTestCube(scene, position) {
       //////////////////////////////////////////////////////////////////////////////////////////////
       let cube = this.makeCube('test', false)
-      cube.rotation.x = Math.PI / 2
-      // cube.position.set(0, 0, 0)
-      cube.position.set(0, 2.22 + 0.5, 0)
+      // cube.rotation.x = Math.PI / 2
+      // // cube.position.set(0, 0, 0)
+      // cube.position.set(0, 2.22 + 0.5, 0)
+      cube.position.copy(position)
       //////////////////////////////////////////////////
       scene.add(cube)
-      if (this.controls && this.controls.type) {
-        this.controls.setObstacles(cube)
-      }
-      // 创建一个三维坐标轴
-      const axesHelper = this.track(new this.THREE.AxesHelper(3))
-      axesHelper.myname = 'my-axesHelper'
-      axesHelper.position.set(0, 0, 0)
-      this.axesHelper = axesHelper
-      // 坐标对象添加到三维场景中
-      scene.add(axesHelper)
+      // if (this.controls && this.controls.type) {
+      //   this.controls.setObstacles(cube)
+      // }
 
       // const cameraHelper = this.track(new this.THREE.CameraHelper(this.camera))
       // axesHelper.myname = 'my-cameraHelper'

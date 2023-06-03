@@ -1,7 +1,10 @@
 import Is from '@/utils/is'
-import { toRaw } from '@vue/reactivity'
+import { markRaw } from 'vue'
+import { PathFind } from '@/components/threejs/load/controls/tools/path-find'
 export class ThirdPersonCameraControl {
   dispose() {
+    this.pathFind.dispose()
+    this.pathFind = null
     this.callback_joyStickJump = null
     this.removeEvents()
     this.com = null
@@ -48,9 +51,10 @@ export class ThirdPersonCameraControl {
     this.phycisMgr = null
     this.com = com
     this.THREE = com.THREE
-    this.camera = com.camera
+    this.camera = markRaw(com.camera)
     this.domElement = domElement !== undefined ? domElement : document
     this.type = 'third'
+    this.pathFind = new PathFind()
     // API
     this.enabled = false
 
@@ -100,8 +104,10 @@ export class ThirdPersonCameraControl {
     this.playerOnFloor = true
 
     this.callback_joyStickJump = null
-    this.rotateQuat = new this.THREE.Quaternion()
-    this.rotateAxis = new this.THREE.Vector3(0, 0, 0)
+    this.rotateQuat = new com.THREE.Quaternion()
+    this.rotateAxis = new com.THREE.Vector3(0, 0, 0)
+
+    this.tagScale = new com.THREE.Vector3(0.01, 0.02, 0.01)
 
     this.keyDown = this.onKeyDown.bind(this)
     this.keyUp = this.onKeyUp.bind(this)
@@ -190,6 +196,7 @@ export class ThirdPersonCameraControl {
     // an object traversing another too quickly for detection.
     for (let i = 0; i < this.STEPS_PER_FRAME; i++) {
       this.checkKeyStates(deltaTime)
+
       let theta = 0
       let radius = 0
       if (this.type == 'third') {
@@ -232,10 +239,6 @@ export class ThirdPersonCameraControl {
         this.camera.position.copy(this.player.position.clone())
       }
 
-      if (this.com.axesHelper) {
-        this.com.axesHelper.position.copy(this.player.position.clone())
-      }
-      //
       this.thetaDelta = 0
       this.phiDelta = 0
       this.scale = 1
@@ -309,6 +312,7 @@ export class ThirdPersonCameraControl {
         }
       }
     }
+   let pathFinding=this.pathFind?this.pathFind.update(deltaTime, this):false
     if (deltaTime != undefined) {
       let damping = Math.exp(-4 * deltaTime) - 1
       if (!this.playerOnFloor) {
@@ -339,6 +343,18 @@ export class ThirdPersonCameraControl {
               this.player.position.copy(pp)
             }
           }
+          if (this.player.tag) {
+            let pos = this.player.position.clone()
+            let tag = this.player.tag
+            if (this.player.tag.mytype == '3d') {
+              let scale = this.tagScale
+              if (!tag.scale.equals(scale)) {
+                tag.scale.set(0.01, 0.01, 0.01)
+              }
+            }
+            tag.visible = this.player.visible
+            tag.position.copy(pos.setY(pos.y + 1)) //偏移跟 模型原点有关
+          }
         }
       }
       if (deltaPosition != undefined && this.player) {
@@ -354,11 +370,12 @@ export class ThirdPersonCameraControl {
           }
         }
       }
-      ////////////////////////////////////////////////////////////////////
+
       if (this.phycisMgr && this.phycisMgr.update != undefined) {
         this.phycisMgr.update(deltaTime, { playerVelocity: this.playerVelocity })
       }
-      this.checkPlayer()
+      if (!pathFinding)
+        this.checkPlayer()
       if (this.callback_joyStickJump) {
       }
 
@@ -428,8 +445,10 @@ export class ThirdPersonCameraControl {
           this.state = this.STATE.ROTATE
           this.rotateStart.set(touch.clientX, touch.clientY)
         }
+        this.isMouseDown = true
       }
     } else {
+      this.isMouseDown = true
       this.__addDocEvents()
       let touch = event
       if (event.button === 0) {
@@ -457,6 +476,7 @@ export class ThirdPersonCameraControl {
     if (!touch) {
       return
     }
+    this.isMouseMoving = true
     if (this.state === this.STATE.ROTATE) {
       this.rotateEnd.set(touch.clientX, touch.clientY)
       this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart)
@@ -512,6 +532,11 @@ export class ThirdPersonCameraControl {
     if (this.enabled === false) return
     if (this.userRotate === false) return
 
+    if (this.isMouseDown && !this.isMouseMoving) {
+      this.selectObject(event)
+    }
+    this.isMouseDown = false
+    this.isMouseMoving = false
     this.__removeDocEvents(1)
     if (this.playerIsMoving) {
       if (this.state == this.STATE.ROTATE) {
@@ -525,6 +550,53 @@ export class ThirdPersonCameraControl {
     this.state = this.STATE.NONE
   }
 
+  makeSelectMouse(event) {
+    if (Is.isMobileDevice()) {
+    } else {
+    }
+    const mouse = new this.THREE.Vector2()
+    // 屏幕坐标转标准设备坐标
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+    //Raycaster.setFromCamera 里有相关的代码
+    // //标准设备坐标(z=0.5这个值比较靠经验)
+    // const stdVector = new this.THREE.Vector3(pt.x, pt.y, 0.5)
+    // //世界坐标
+    // const worldVector = stdVector.unproject(this.camera)
+    return mouse
+  }
+  selectObject(event) {
+    let pt = this.makeSelectMouse(event)
+    if (!this.raycaster) this.raycaster = markRaw(new this.THREE.Raycaster())
+    if (this.raycaster) {
+      this.camera.updateMatrixWorld()
+      this.raycaster.setFromCamera(pt, this.camera)
+      let scene=this.com.scene
+      let navmesh=scene.getObjectByName('navmesh')
+      if (navmesh){
+        //获取寻路的 目标坐标
+        const nav_res = this.raycaster.intersectObject( navmesh )
+        if (nav_res&&nav_res.length>0){
+          let dest=nav_res[0].point
+          this.pathFind.test('demo', this.player.position.clone(), dest,this)
+        }
+      }
+      //获取点击的 物品
+      //遍历 scene.children对象  第二个参数：false不遍历对象子
+      const intersects = this.raycaster.intersectObjects(this.com.scene.children, false)
+      if (intersects && intersects.length) {
+        if (intersects.length > 0) {
+          for (let i = 0; i < intersects.length; i++) {
+            let it = intersects[i]
+            if (it.object.myname != 'Sky' && it.object.myname != 'my-axesHelper') {
+
+              break
+            }
+          }
+        }
+      }
+    }
+  }
   onMouseWheel(event) {
     if (this.enabled === false) return
     if (this.userRotate === false) return
@@ -635,6 +707,7 @@ export class ThirdPersonCameraControl {
             this.player.player.rotation.y = dir
           }
           if (isDown) {
+            if(this.pathFind)this.pathFind.clearPath()
             this.playerIsMoving = true
           }
         }
@@ -663,11 +736,8 @@ export class ThirdPersonCameraControl {
         } else {
           this.player.player.rotation.y = rad + theta - Math.PI / 2
         }
+        if (this.pathFind)this.pathFind.clearPath()
         this.playerIsMoving = true
-      } else {
-        // let drad=rad + Math.PI / 2-this.player.player.rotation.y
-        //this.player.player.rotation.y = rad + Math.PI / 2
-        // this.rotateByAxis(this.camera,drad,'y',true)
       }
     }
   }

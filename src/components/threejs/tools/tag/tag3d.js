@@ -8,12 +8,15 @@ function tag3D(name) {
     div.classList.add('tag');
     //div元素包装为CSS3模型对象CSS3DObject
     var label = new CSS3DObject(div);
+    label.myname='CSS3DObject'
+    label.mytype='3d'
     div.style.pointerEvents = 'none';//避免HTML标签遮挡三维场景的鼠标事件
     // 设置HTML元素标签在three.js世界坐标中位置
     // label.position.set(x, y, z);
+    div.style.fontSize='11px'
     //缩放CSS3DObject模型对象
-    label.scale.set(0.2, 0.2, 0.2);//根据相机渲染范围控制HTML 3D标签尺寸
-    label.rotateY(Math.PI / 2);//控制HTML标签CSS3对象姿态角度
+    label.scale.set(0.01, 0.01, 0.01);//根据相机渲染范围控制HTML 3D标签尺寸
+    // label.rotateY(Math.PI / 2);//控制HTML标签CSS3对象姿态角度
     // label.rotateX(-Math.PI/2);
     return label;//返回CSS3模型标签
 }
@@ -26,12 +29,17 @@ function tag3DSprite(name) {
     div.classList.add('tag');
     //div元素包装为CSS3模型对象CSS3DSprite
     var label = new CSS3DSprite(div);
+    label.myname='CSS3DSprite'
+    label.mytype='3d'
+    div.style.fontSize='11px'
     div.style.pointerEvents = 'none';//避免HTML标签遮挡三维场景的鼠标事件
     // 设置HTML元素标签在three.js世界坐标中位置
     // label.position.set(x, y, z);
     //缩放CSS3DSprite模型对象
-    label.scale.set(0.2, 0.2, 0.2);//根据相机渲染范围控制HTML 3D标签尺寸
-    label.rotateY(Math.PI / 2);//控制HTML标签CSS3对象姿态角度
+    // div.style.fontSize='11px'
+    //根据相机渲染范围控制HTML 3D标签尺寸,需要调整
+    label.scale.set(0.01, 0.01, 0.01);
+    // label.rotateY(Math.PI / 2);//控制HTML标签CSS3对象姿态角度
     // label.rotateX(-Math.PI/2);
     return label;//返回CSS3模型标签
 }
@@ -39,6 +47,7 @@ function tag3DSprite(name) {
 // 创建一个CSS2渲染器CSS2DRenderer
 function labelRenderer(container) {
     var labelRenderer = new CSS3DRenderer();
+    labelRenderer.myname='CSS3DRenderer'
     labelRenderer.setSize(container.offsetWidth, container.offsetHeight);
     labelRenderer.domElement.style.position = 'absolute';
     // 相对标签原位置位置偏移大小

@@ -18,11 +18,9 @@ import PageRoot, { PageNavDef } from '@/components/page/index'
 import { useChildren, useParent } from '@vant/use'
 import loaderMap from '@/components/threejs/load/loader-map'
 import threejsLoad from '@/components/threejs/threejs-load.vue'
-
 import { CannonMgr } from '@/components/threejs/load/controls/phycis/cannon-mgr'
 import { OctreeMgr } from '@/components/threejs/load/controls/phycis/octree-mgr'
 
-import { toRaw } from '@vue/reactivity'
 import JoyStick from '@/components/threejs/joy-stick/joy-stick.vue'
 import { PositionalAudioHelper } from 'three/addons/helpers/PositionalAudioHelper.js'
 const props = defineProps(['relationKey'])
@@ -136,6 +134,7 @@ const module = reactive({
 })
 const threejsLoadRef = ref('threejsLoadRef')
 const showActionSheet = ref(false)
+
 const setScene = function (scene, THREE) {
   scene.background = new THREE.Color(0x72645b)
   // if (module.data.mode == 'fbx') {
@@ -162,7 +161,7 @@ const playAudio = function () {
 }
 let mmdAniHelper = null
 //测试将mmd 转成postion模式
-let positionMmdMusicMode=true
+let positionMmdMusicMode = true
 const testmmdAudio = async function () {
   let com = threejsLoadRef.value
   if (com) {
@@ -194,12 +193,16 @@ const testmmdAudio = async function () {
                   })
                   const addToControl = () => {
                     //缩放
-                    mesh.scale.set(0.15, 0.15, 0.15)
+                    mesh.scale.set(0.1, 0.1, 0.1)
                     //调整初始位置
                     let pos = com.getVec3()
                     pos.x = 1.5
-                    makePlayer(com, mesh, { noPlayer: true, position: pos }, (player) => {
+                    pos.y = 1.2
+                    let tag = { type: '3d', useSprite: true, name: '我是npc' }
+                    makePlayer(com, mesh, { noPlayer: true, position: pos, tag: tag }, (player) => {
+                      com.lodLevel(player, 2)
                       com.scene.add(player)
+
                       mmdAniHelper = helper
                       controls.phycisMgr.addNpc(player)
                       controls.phycisMgr.addObstacles(player)
@@ -250,29 +253,27 @@ const playPositinAudio = function () {
       let com = threejsLoadRef.value
       const helper = com.track(new PositionalAudioHelper(positionAudio, 0.1))
       positionAudio.add(helper)
+      if (positionAudio) {
+        controls.player.add(positionAudio)
+      }
       loadModule('modules/gltf/BoomBox.glb', null, (obj, item) => {
-        com.track(obj.scene)
         const boomBox = obj.scene
-        boomBox.position.set(0, -1.5, 0)
+        boomBox.position.set(1.0, 0.6, 0)
         boomBox.scale.set(20, 20, 20)
         boomBox.traverse(function (object) {
           if (object.isMesh) {
-            // const reflectionCube = new com.THREE.CubeTextureLoader()
-            //   .setPath('/textures/cube/SwedishRoyalCastle/')
-            //   .load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
-            // com.track(reflectionCube)
-            // object.material.envMap = reflectionCube
             object.geometry.rotateY(-Math.PI)
             object.castShadow = true
           }
         })
+        com.track(boomBox)
+        boomBox.myname = 'BoomBox'
+        com.lodLevel(boomBox, 5)
         com.scene.add(boomBox)
+
+        //必须调用
+        positionMusicRef.value.play()
       })
-      if (positionAudio) {
-        controls.player.add(positionAudio)
-      }
-      //必须调用
-      positionMusicRef.value.play()
     }
   }
 }
@@ -321,9 +322,17 @@ const setPlayer = function (player) {
     controls.setEnable(player != null)
   }
 }
-const setRender = function (render, THREE) {
+const setRender = async function (render, THREE) {
   let controlsType = 'third' //first third or null
-  let ctrls = threejsLoadRef.value.createOrbitControls(render.domElement, controlsType)
+  let com = threejsLoadRef.value
+  let ctrls = com.createOrbitControls(render.domElement, controlsType)
+  try {
+    // await com.skyBox.createSky(com.scene)
+    // com.skyBox.changeSky()
+    com.skyBox.test()
+  } catch (e) {
+    console.error(e)
+  }
   controls = ctrls
   if (ctrls) {
     if (!ctrls.type) {
@@ -336,9 +345,10 @@ const setRender = function (render, THREE) {
       }
     }
   }
+  return render
 }
-
-const setAnimate = function (delta, camera, scene, THREE) {
+const setAnimate = async function (delta, camera, scene, THREE) {
+  //阻塞
   if (mmdAniHelper && mmdAudioFlag) mmdAniHelper.update(delta)
 }
 
@@ -360,6 +370,10 @@ const makePlayer = async function (com, obj, params, callback) {
     let radius = 0.66
     //gltf模型显示高度是 2.22
     let playerH = 2.22 //
+    if (params && params.unNormal) {
+      radius = 0.33
+      playerH = 1.11
+    }
     let flag = false
     if (objSize.y < 4 && objSize.y > radius * 2) {
       //假设这个范围的size是正确的
@@ -419,11 +433,22 @@ const makePlayer = async function (com, obj, params, callback) {
     if (flag) {
       player.player.position.y = -playerH / 2
     } else {
-      player.player.position.y = -1.07 //2.14
+      if (params && params.unNormal) {
+        player.player.position.y = -0.53 //2.14
+      } else {
+        player.player.position.y = -1.07 //2.14
+      }
     }
     player.centerY = playerH / 2
     if (params && params.position) {
       player.position.copy(params.position)
+    }
+    if (params && params.tag) {
+      let tag = com.getTag(params.tag)
+      tag.position.copy(player.position.clone())
+      player.tag = tag
+      // tag.position.copy(player.position.clone().setY(player.position.y+0.4))
+      com.scene.add(com.track(tag))
     }
     callback(player)
 
@@ -495,6 +520,10 @@ const doLoad = async function (mLoader, file) {
     mLoader.load(
       file,
       (obj) => {
+        let com = threejsLoadRef.value
+        if (obj) {
+          com.track(obj)
+        }
         resolve(obj)
       },
       onProgress
@@ -527,7 +556,7 @@ const loadModule = async (file, materials, resolve, resolveall) => {
       return
     }
     let obj = await doLoad(mLoader, file).catch((e) => {})
-    if (resolve) resolve(obj, obj)
+    if (resolve) resolve(obj, file)
     if (resolveall) {
       allItems.push({ file: file, obj: obj })
       resolveall(allItems)
@@ -540,13 +569,68 @@ const setLoadModule = async function (scene, THREE) {
     let mode = module.data.mode
     let file = module.data.file
     await initPhycisMgr(com, 1)
-
-    loadModule('/modules/gltf/collision-world.glb', null, (obj, item) => {
+    // let world_file = '/modules/gltf/collision-world.glb'
+    let world_file ='/modules/gltf/level.glb'
+    if (world_file == '/modules/gltf/level.glb') {
+      loadModule('/modules/gltf/level-nav.glb', null, (obj, item) => {
+        if (!obj) {
+          console.log('loadModule', item + '--get failed')
+          return
+        }
+        if (controls && controls.type) {
+          const _navmesh = obj.scene.getObjectByName('Navmesh_Mesh')
+          controls.pathFind.createZone('demo', _navmesh.geometry)
+          com.track(_navmesh)
+          scene.add(controls.pathFind.getHelper())
+          //查看线
+          // const navWireframe = com.track(
+          //   new THREE.Mesh(
+          //     _navmesh.geometry,
+          //     new THREE.MeshBasicMaterial({
+          //       color: 0x808080,
+          //       wireframe: true
+          //     })
+          //   )
+          // )
+          // scene.add(navWireframe);
+          //
+          //面 透明背景
+          let navmesh = com.track(
+            new THREE.Mesh(
+              _navmesh.geometry,
+              new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                opacity: 0,
+                transparent: true
+              })
+            )
+          )
+          navmesh.name = 'navmesh'
+          scene.add(navmesh)
+        }
+      })
+    }
+    //'/modules/gltf/collision-world.glb'
+    loadModule(world_file, null, (obj, item) => {
       if (!obj) {
         console.log('loadModule', item + '--get failed')
         return
       }
-      let wrap = com.track(obj.scene)
+      let wrap = null
+      if (item == '/modules/gltf/level.glb') {
+        const levelMesh = obj.scene.getObjectByName('Cube')
+        const levelMat = com.track(
+          new THREE.MeshStandardMaterial({
+            color: 0x606060,
+            flatShading: true,
+            roughness: 1,
+            metalness: 0
+          })
+        )
+        wrap = com.track(new THREE.Mesh(levelMesh.geometry, levelMat))
+      } else {
+        wrap = com.track(obj.scene)
+      }
       wrap.myname = 'world-scene'
       scene.add(wrap)
       // let world = groundPlane
@@ -580,11 +664,12 @@ const setLoadModule = async function (scene, THREE) {
             console.log('loadModule', item + '--get failed')
             return
           }
-          obj.scale.multiplyScalar(0.015)
+          obj.scale.multiplyScalar(0.015 * 0.5)
+          let position = com.getVec3().set(1, 1.4, 0)
           obj.myname = 'mtl-obj'
           let wrap = com.track(obj)
           // scene.add(wrap)
-          makePlayer(com, wrap, null, (player) => {
+          makePlayer(com, wrap, { position: position }, (player) => {
             scene.add(player)
             setPlayer(player)
             com.setMiniMap(player)
@@ -604,8 +689,10 @@ const setLoadModule = async function (scene, THREE) {
           if (mode == 'gltf') {
             let wrap = com.track(obj.scene)
             wrap.myname = 'gltf-scene'
-            wrap.scale.multiplyScalar(0.5)
-            makePlayer(com, wrap, null, (player) => {
+            wrap.scale.multiplyScalar(0.25)
+            let position = com.getVec3().set(1, 1.4, 0)
+            let tag = { type: '3d', useSprite: true, name: '我是player' }
+            makePlayer(com, wrap, { unNormal: true, position: position, tag: tag }, (player) => {
               scene.add(player)
               setPlayer(player)
               com.setMiniMap(player)
@@ -625,7 +712,9 @@ const setLoadModule = async function (scene, THREE) {
             createGUI(com, THREE, wrap, obj.animations)
             obj = null
           } else if (mode == 'fbx') {
-            scene.add(com.track(obj))
+            let wrap = com.track(obj)
+            // scene.add(wrap)
+            obj.scale.multiplyScalar(0.01)
             obj.myname = 'fbx-obj'
             const action = com.setMixer(obj, obj.animations[0])
             obj.traverse(function (child) {
@@ -637,13 +726,20 @@ const setLoadModule = async function (scene, THREE) {
             if (action) {
               action.play()
             }
+            let position = com.getVec3().set(1, 1.4, 0)
+            makePlayer(com, wrap, { position: position }, (player) => {
+              scene.add(player)
+              setPlayer(player)
+              com.setMiniMap(player)
+            })
           } else if (mode == 'collada') {
-            obj.scene.scale.multiplyScalar(0.5)
+            obj.scene.scale.multiplyScalar(0.5 * 0.4)
+            let position = com.getVec3().set(1, 0, 0)
             modelAnimate = obj.scene
             obj.scene.myname = 'collada-scene'
             let wrap = com.track(obj.scene)
             // scene.add(wrap)
-            makePlayer(com, wrap, null, (player) => {
+            makePlayer(com, wrap, { position: position }, (player) => {
               scene.add(player)
               player.axisy_z = true
               setPlayer(player)
@@ -675,7 +771,13 @@ const setLoadModule = async function (scene, THREE) {
                 }
               })
               if (flag) {
-                makePlayer(com, group, null, (player) => {
+                let position = com.getVec3().set(1, 0.9, 0)
+                if (mode == 'ply') {
+                  group.scale.multiplyScalar(0.5)
+                  position = com.getVec3().set(1, 1.4, 0)
+                }
+
+                makePlayer(com, group, { position: position }, (player) => {
                   scene.add(player)
                   setPlayer(player)
                   com.setMiniMap(player)
@@ -982,6 +1084,8 @@ const getRad = function (val) {
         :setLoadModule="setLoadModule2"
         :show-stats="true"
         :showControls="false"
+        :show-tag="true"
+        :use-lod="true"
       />
 
       <van-action-sheet
@@ -991,9 +1095,8 @@ const getRad = function (val) {
         description="模型切换"
         @select="onSelected"
       />
-      <audio ref="positionMusicRef" loop id="music" preload="auto"
-             style="display: none;">
-<!--          ogg ios浏览器不能播，两个自动 兼容-->
+      <audio ref="positionMusicRef" loop id="music" preload="auto" style="display: none">
+        <!--          ogg ios浏览器不能播，两个自动 兼容-->
         <source src="/audio/sounds/376737_Skullbeatz___Bad_Cat_Maste.ogg" type="audio/ogg" />
         <source src="/audio/sounds/376737_Skullbeatz___Bad_Cat_Maste.mp3" type="audio/mpeg" />
       </audio>

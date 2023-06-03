@@ -1,4 +1,5 @@
 import { Mgr } from '@/components/threejs/load/controls/phycis/mgr'
+import {markRaw} from "vue";
 export class OctreeMgr extends Mgr {
   dispose() {
     this.clear()
@@ -52,7 +53,7 @@ export class OctreeMgr extends Mgr {
   setWorld(world) {
     super.setWorld(world)
     if (!this.worldOctree){
-      this.worldOctree = this.track(new this.OctreeCls())
+      this.worldOctree = markRaw(this.track(new this.OctreeCls()))
     }
     if (this.worldOctree) {
       this.worldOctree.fromGraphNode(world)
@@ -66,7 +67,7 @@ export class OctreeMgr extends Mgr {
   }
   showHelper=async function (flag){
     if (!this.octreeHelper&&this.worldOctree){
-      this.octreeHelper = this.track(new this.OctreeHelperCls(this.worldOctree))
+      this.octreeHelper =markRaw(this.track(new this.OctreeHelperCls(this.worldOctree)))
     }
     if ( this.octreeHelper){
       this.octreeHelper.visible = flag
@@ -157,6 +158,18 @@ export class OctreeMgr extends Mgr {
       let dy = (end.y - start.y) / 2
       let pp = start.clone().setY(start.y + dy)
       npc.position.copy(pp)
+
+      if (npc.tag) {
+        let tag = npc.tag
+        if (npc.tag.mytype == '3d') {
+          // let scale = this.tagScale
+          // if (!tag.scale.equals(scale)) {
+          //   tag.scale.set(0.01, 0.01, 0.01)
+          // }
+        }
+        tag.visible = npc.visible
+        tag.position.copy(pp.setY(pp.y + 1))//偏移跟 模型原点有关
+      }
     }
   }
   checkCollid(npc){

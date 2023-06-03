@@ -1,4 +1,4 @@
-import {toRaw} from "@vue/reactivity";
+import {markRaw} from "vue";
 
 export class MiniMap {
     _miniMapCamera = null;
@@ -27,7 +27,7 @@ export class MiniMap {
     ) {
         this.com=options.com
         this.THREE=options.com.THREE
-        this.scene = options.com.scene;
+        this.scene = markRaw(options.com.scene);
         this.mapSize = options.mapSize || 10;
         this.mapRenderSize = options.mapRenderSize || 120;
         this.mapRotateZ = options.mapRotateZ || 0;
@@ -82,7 +82,7 @@ export class MiniMap {
             1,
             100
         )); //在这种投影模式下，无论物体距离相机距离远或者近，在最终渲染的图片中物体的大小都保持不变。这对于渲染2D场景或者UI元素是非常有用的。
-        this._miniMapCamera = mapCamera;
+        this._miniMapCamera = markRaw(mapCamera);
 
         // 更新地图相机位置和朝向
         this.updateCamera();
@@ -113,8 +113,8 @@ export class MiniMap {
         if (this.scene){
             // 更新地图相机位置和朝向
             this.updateCamera();
-            let sceneRaw=toRaw(this.scene)
-            let cameraRaw=toRaw(this._miniMapCamera)
+            let sceneRaw=this.scene
+            let cameraRaw=this._miniMapCamera
             // 渲染小地图
             this._miniMapRenderer.render(sceneRaw, cameraRaw);
         }

@@ -1,3 +1,5 @@
+import {markRaw} from "vue";
+
 export class Mgr {
   dispose() {
     this.THREE = null
@@ -7,24 +9,24 @@ export class Mgr {
     this.player = null
   }
   clear(){
-    this.colliders = []
+    this.colliders =  markRaw([])
     this.world = null
     this.player = null
-    this.npcs=[]
+    this.npcs= markRaw([])
   }
   constructor(com) {
-    this.com = com
+    this.com = markRaw(com)
     this.npcVelocity = null
     if (com) {
       this.THREE = com.THREE
     }
-    this.colliders = []
+    this.colliders = markRaw([])
     this.mgrType = null
     this.world = null
     this.player = null
     this.SPHERE_RADIUS=0.2
     this.GRAVITY = 30
-    this.npcs=[]
+    this.npcs=markRaw([])
 
   }
   __getVec3(){
@@ -32,7 +34,7 @@ export class Mgr {
   }
   setCom(com) {
     // threejs-load 对象
-    this.com = com
+    this.com = markRaw(com)
     if (com) {
       this.THREE = com.THREE
     }
@@ -60,15 +62,15 @@ export class Mgr {
     return obj
   }
   setWorld(world) {
-    this.world = world
+    this.world =  markRaw(world)
   }
   setPlayer(player) {
-    this.player = player
+    this.player = markRaw(player)
   }
   addNpc(npc){
     npc.npcVelocity = new this.THREE.Vector3(0,0,0)
     npc.inOnFloor = true
-    this.npcs.push(npc)
+    this.npcs.push(markRaw(npc))
   }
   showHelper=async function (flag){
 

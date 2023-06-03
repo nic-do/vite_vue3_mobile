@@ -1,11 +1,3 @@
-// import {
-//   BufferGeometry,
-//   Float32BufferAttribute,
-//   LineSegments,
-//   LineDashedMaterial,
-//   Box3,
-//   Vector3
-// } from 'three'
 /*** 画 Box 虚线工具*/
 export class DashLinesBoxTool {
   constructor(com) {
