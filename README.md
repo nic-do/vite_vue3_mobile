@@ -20,8 +20,11 @@
 
 10、webp转换及加载     完成  转换逻辑待完善，具体见说明
 
+11、添加threejs       基本完成 octree例子。cannon-es例子开发中。支持页面中按需动态引入ammo、cannon-es
+                     实现了基本的第一/三人称控制器和joystick。
+
 内置了mock配合axios模拟接口调用  dev和preview模式都可以使用
 
-build包分析结果：最大的chunk size：render：650k左右，gzip压缩后：160k左右
+build包分析结果：除最新引入的threejs相关内容。其他最大的chunk size：render：700k左右，gzip压缩后：200k左右
 
 其他说明具体见说明目录下的各项说明
