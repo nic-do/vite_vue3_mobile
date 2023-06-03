@@ -570,7 +570,7 @@ const setLoadModule = async function (scene, THREE) {
     let file = module.data.file
     await initPhycisMgr(com, 1)
     // let world_file = '/modules/gltf/collision-world.glb'
-    let world_file ='/modules/gltf/level.glb'
+    let world_file = '/modules/gltf/level.glb'
     if (world_file == '/modules/gltf/level.glb') {
       loadModule('/modules/gltf/level-nav.glb', null, (obj, item) => {
         if (!obj) {
@@ -600,7 +600,7 @@ const setLoadModule = async function (scene, THREE) {
               _navmesh.geometry,
               new THREE.MeshBasicMaterial({
                 color: 0xffffff,
-                opacity: 0,
+                // opacity: 0,
                 transparent: true
               })
             )
@@ -884,6 +884,15 @@ const createGUI = async function (com, THREE, model, animations) {
   com.gui = com.track(new com.GUI())
   com.gui.domElement.style.top = '88px' //可以调整位置
   com.gui.domElement.style.left = '0px' //可以调整位置
+  com.gui.add({ showStats: true }, 'showStats').onChange(function (value) {
+    showStats.value = value
+  })
+  com.gui.add({ showMinMap: true }, 'showMinMap').onChange(function (value) {
+    com.miniMap._miniMapDomEl.style.display = value ? '' : 'none'
+  })
+  com.gui.add({ showJoyStick: false }, 'showJoyStick').onChange(function (value) {
+    showJoyStick.value = value
+  })
   com.gui.add({ debug: false }, 'debug').onChange(function (value) {
     if (octreeMgr && octreeMgr.octreeHelper) octreeMgr.octreeHelper.visible = value
   })
@@ -1063,6 +1072,8 @@ const getRad = function (val) {
     }
   }
 }
+const showJoyStick = ref(false)
+const showStats = ref(true)
 </script>
 <template>
   <page-root>
@@ -1082,7 +1093,7 @@ const getRad = function (val) {
         :setRender="setRender"
         :setAnimate="setAnimate"
         :setLoadModule="setLoadModule2"
-        :show-stats="true"
+        :show-stats="showStats"
         :showControls="false"
         :show-tag="true"
         :use-lod="true"
@@ -1100,7 +1111,7 @@ const getRad = function (val) {
         <source src="/audio/sounds/376737_Skullbeatz___Bad_Cat_Maste.ogg" type="audio/ogg" />
         <source src="/audio/sounds/376737_Skullbeatz___Bad_Cat_Maste.mp3" type="audio/mpeg" />
       </audio>
-      <joy-stick :get-rad="getRad" :jump="jump" :shoot="shoot"></joy-stick>
+      <joy-stick v-if="showJoyStick" :get-rad="getRad" :jump="jump" :shoot="shoot"></joy-stick>
     </template>
   </page-root>
 </template>
