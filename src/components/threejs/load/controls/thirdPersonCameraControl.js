@@ -353,7 +353,7 @@ export class ThirdPersonCameraControl {
               }
             }
             tag.visible = this.player.visible
-            tag.position.copy(pos.setY(pos.y + 1)) //偏移跟 模型原点有关
+            tag.position.copy(pos.setY(pos.y + 0.4)) //偏移跟 模型原点有关
           }
         }
       }
@@ -421,9 +421,13 @@ export class ThirdPersonCameraControl {
   }
   allTouches(event) {
     let touches = []
-    for (let i = 0; i < event.targetTouches.length; i++) {
-      if (event.targetTouches[i].target == this.domElement) {
-        touches.push(event.targetTouches[i])
+    let touchesAvailable=event.targetTouches
+    if (event.type=='touchend'){
+      touchesAvailable=event.changedTouches
+    }
+    for (let i = 0; i < touchesAvailable.length; i++) {
+      if (touchesAvailable[i].target == this.domElement) {
+        touches.push(touchesAvailable[i])
       }
     }
     return touches
@@ -440,7 +444,10 @@ export class ThirdPersonCameraControl {
         let touch = allTouch[0]
         if (allTouch.length > 1) {
           this.state = this.STATE.ZOOM
-          this.zoomStart.set(touch, touch)
+          let touch1= allTouch[1]
+          this.zoomStart.set(touch.clientX, touch.clientY)
+          this.zoomEnd.set(touch1.clientX, touch1.clientY)
+          this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
         } else {
           this.state = this.STATE.ROTATE
           this.rotateStart.set(touch.clientX, touch.clientY)
@@ -465,8 +472,10 @@ export class ThirdPersonCameraControl {
     if (this.enabled === false) return
     event.preventDefault()
     let touch = null
-    if (Is.isMobileDevice()) {
-      let allTouch = this.allTouches(event)
+    let isMobile=Is.isMobileDevice()
+    let allTouch =null
+    if (isMobile) {
+      allTouch = this.allTouches(event)
       if (allTouch.length > 0) {
         touch = allTouch[0]
       }
@@ -510,15 +519,33 @@ export class ThirdPersonCameraControl {
       }
       this.rotateStart.copy(this.rotateEnd)
     } else if (this.state === this.STATE.ZOOM) {
-      this.zoomEnd.set(touch.clientX, touch.clientY)
-      this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
+      if (isMobile){
 
-      if (this.zoomDelta.y > 0) {
-        this.zoomIn()
-      } else {
-        this.zoomOut()
+        if (allTouch&&allTouch.length>1){
+          let touch1= allTouch[1]
+          this.zoomStart.set(touch.clientX, touch.clientY)
+          this.zoomEnd.set(touch1.clientX, touch1.clientY)
+          let prev=this.zoomDelta.clone()
+          console.log('mouse-move',prev)
+          this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
+          console.log('mouse-move-now',this.zoomDelta)
+          if (this.zoomDelta.length()>prev.length()+0.5){
+            this.zoomOut()
+          }else if (this.zoomDelta.length()+0.5<prev.length()){
+            this.zoomIn()
+          }
+        }
+      }else{
+        this.zoomEnd.set(touch.clientX, touch.clientY)
+        this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
+        if (this.zoomDelta.y > 0) {
+          this.zoomIn()
+        } else {
+          this.zoomOut()
+        }
+        console.error('---',this.zoomDelta)
+        this.zoomStart.copy(this.zoomEnd)
       }
-      this.zoomStart.copy(this.zoomEnd)
     }
   }
 
@@ -551,13 +578,17 @@ export class ThirdPersonCameraControl {
   }
 
   makeSelectMouse(event) {
+    let touch =event
     if (Is.isMobileDevice()) {
-    } else {
+      let allTouch = this.allTouches(event)
+      if (allTouch.length > 0) {
+         touch = allTouch[0]
+      }
     }
     const mouse = new this.THREE.Vector2()
     // 屏幕坐标转标准设备坐标
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+    mouse.x = (touch.clientX / window.innerWidth) * 2 - 1
+    mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1
     //Raycaster.setFromCamera 里有相关的代码
     // //标准设备坐标(z=0.5这个值比较靠经验)
     // const stdVector = new this.THREE.Vector3(pt.x, pt.y, 0.5)
@@ -609,7 +640,7 @@ export class ThirdPersonCameraControl {
       // Firefox
       delta = -event.detail
     }
-
+    console.error('---','onMouseWheel')
     if (delta > 0) {
       this.zoomOut()
     } else {

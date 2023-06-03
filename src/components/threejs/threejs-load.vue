@@ -764,7 +764,7 @@ export default {
       }
     },
     setMiniMap(target) {
-      this.miniMap = markRaw(new MiniMap({ com: this, target, mapSize: 35, mapRenderSize: 150 }))
+      this.miniMap = markRaw(new MiniMap({ com: this, target, mapSize: 15, mapRenderSize: 150 }))
     },
     makeCube(tag, wireframe, color) {
       let material = this.track(
