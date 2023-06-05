@@ -54,7 +54,7 @@ export class ThirdPersonCameraControl {
     this.camera = markRaw(com.camera)
     this.domElement = domElement !== undefined ? domElement : document
     this.type = 'third'
-    this.pathFind = new PathFind()
+    this.pathFind = markRaw(new PathFind())
     // API
     this.enabled = false
 
@@ -101,6 +101,7 @@ export class ThirdPersonCameraControl {
     this.STEPS_PER_FRAME = 5
     this.GRAVITY = 30
     this.playerVelocity = new com.THREE.Vector3()
+    this.velocityCheck = new com.THREE.Vector3(0, 0, 0)
     this.playerOnFloor = true
 
     this.callback_joyStickJump = null
@@ -252,12 +253,10 @@ export class ThirdPersonCameraControl {
         this.playerOnFloor = false
         // 地面检测
         if (result) {
+          const velocity = this.playerVelocity
           this.playerOnFloor = result.normal.y > 0
           if (!this.playerOnFloor) {
-            this.playerVelocity.addScaledVector(
-              result.normal,
-              -result.normal.dot(this.playerVelocity)
-            )
+            velocity.addScaledVector(result.normal, -result.normal.dot(velocity))
           }
           const deltaPosition = result.normal.multiplyScalar(result.depth)
           this.player.collider.translate(deltaPosition)
@@ -266,15 +265,33 @@ export class ThirdPersonCameraControl {
     }
   }
   checkKeyStates(deltaTime) {
+    if (this.stopPathFind) {
+      if (this.pathFind) this.pathFind.clearPath()
+      this.stopPathFind = false
+    }
     let space = this.keyState[32]
+    const velocity = this.playerVelocity
     if (space) {
       this.keyState[32] = false
       if (this.playerOnFloor) {
-        this.playerVelocity.y = 15
+        velocity.y = 15
       }
     }
+    let pathFinding = false
+    let dest_pathFind = null
     if (this.playerOnFloor) {
-      if (this.playerIsMoving) {
+      let dest = this.pathFind?.getDest()
+      if (dest) {
+        dest_pathFind = dest
+        pathFinding = true
+        if (this.player.axisy_z) {
+          //有个模型轴有问题
+          this.player.player.rotation.z = dest.rotation
+        } else {
+          this.player.player.rotation.y = dest.rotation
+        }
+      }
+      if (this.playerIsMoving || pathFinding) {
         let rotate = this.player.player.rotation.y
         if (this.player.axisy_z) {
           //有个模型轴有问题
@@ -303,25 +320,33 @@ export class ThirdPersonCameraControl {
           let yy = this.moveSpeed * Math.cos(rotate)
           if (this.player.axisy_z) {
             //有个模型轴有问题
-            this.playerVelocity.x = xx
-            this.playerVelocity.z = yy
+            velocity.x = xx
+            velocity.z = yy
           } else {
-            this.playerVelocity.x = xx
-            this.playerVelocity.z = yy
+            velocity.x = xx
+            velocity.z = yy
           }
         }
       }
     }
-   let pathFinding=this.pathFind?this.pathFind.update(deltaTime, this):false
     if (deltaTime != undefined) {
       let damping = Math.exp(-4 * deltaTime) - 1
       if (!this.playerOnFloor) {
-        this.playerVelocity.y -= this.GRAVITY * deltaTime
+        velocity.y -= this.GRAVITY * deltaTime
         // small air resistance
         damping *= 0.1
       }
-      this.playerVelocity.addScaledVector(this.playerVelocity, damping)
-      const deltaPosition = this.playerVelocity.clone().multiplyScalar(deltaTime)
+      velocity.addScaledVector(velocity, damping)
+      let deltaPosition = velocity.clone().multiplyScalar(deltaTime)
+      if (dest_pathFind) {
+        //注：checkDelta有待优化，碰撞反弹 可能会影响判断
+        let res = this.pathFind?.checkDelta(dest_pathFind.position, deltaPosition, this)
+        if (res.finished) {
+          velocity.set(0, velocity.y, 0)
+        }
+        deltaPosition.x = res.delta.x
+        deltaPosition.z = res.delta.z
+      }
       let updatePos = () => {
         if (this.phycisMgr) {
           if (this.phycisMgr.mgrType == 'octree') {
@@ -363,22 +388,17 @@ export class ThirdPersonCameraControl {
             this.player.collider.translate(deltaPosition)
           } else if (this.phycisMgr.mgrType == 'cannon') {
             if (this.phycisMgr.playerBody) {
-              this.phycisMgr.playerBody.velocity.x = this.playerVelocity.x
-              this.phycisMgr.playerBody.velocity.z = this.playerVelocity.z
-              this.phycisMgr.playerBody.velocity.y = this.playerVelocity.y
+              this.phycisMgr.playerBody.velocity.x = velocity.x
+              this.phycisMgr.playerBody.velocity.z = velocity.z
+              this.phycisMgr.playerBody.velocity.y = velocity.y
             }
           }
         }
       }
-
-      if (this.phycisMgr && this.phycisMgr.update != undefined) {
-        this.phycisMgr.update(deltaTime, { playerVelocity: this.playerVelocity })
-      }
-      if (!pathFinding)
-        this.checkPlayer()
+      // if (!pathFinding)
+      this.checkPlayer()
       if (this.callback_joyStickJump) {
       }
-
       updatePos()
     }
   }
@@ -421,9 +441,9 @@ export class ThirdPersonCameraControl {
   }
   allTouches(event) {
     let touches = []
-    let touchesAvailable=event.targetTouches
-    if (event.type=='touchend'){
-      touchesAvailable=event.changedTouches
+    let touchesAvailable = event.targetTouches
+    if (event.type == 'touchend') {
+      touchesAvailable = event.changedTouches
     }
     for (let i = 0; i < touchesAvailable.length; i++) {
       if (touchesAvailable[i].target == this.domElement) {
@@ -444,7 +464,7 @@ export class ThirdPersonCameraControl {
         let touch = allTouch[0]
         if (allTouch.length > 1) {
           this.state = this.STATE.ZOOM
-          let touch1= allTouch[1]
+          let touch1 = allTouch[1]
           this.zoomStart.set(touch.clientX, touch.clientY)
           this.zoomEnd.set(touch1.clientX, touch1.clientY)
           this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
@@ -472,8 +492,8 @@ export class ThirdPersonCameraControl {
     if (this.enabled === false) return
     event.preventDefault()
     let touch = null
-    let isMobile=Is.isMobileDevice()
-    let allTouch =null
+    let isMobile = Is.isMobileDevice()
+    let allTouch = null
     if (isMobile) {
       allTouch = this.allTouches(event)
       if (allTouch.length > 0) {
@@ -519,23 +539,20 @@ export class ThirdPersonCameraControl {
       }
       this.rotateStart.copy(this.rotateEnd)
     } else if (this.state === this.STATE.ZOOM) {
-      if (isMobile){
-
-        if (allTouch&&allTouch.length>1){
-          let touch1= allTouch[1]
+      if (isMobile) {
+        if (allTouch && allTouch.length > 1) {
+          let touch1 = allTouch[1]
           this.zoomStart.set(touch.clientX, touch.clientY)
           this.zoomEnd.set(touch1.clientX, touch1.clientY)
-          let prev=this.zoomDelta.clone()
-          console.log('mouse-move',prev)
+          let prev = this.zoomDelta.clone()
           this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
-          console.log('mouse-move-now',this.zoomDelta)
-          if (this.zoomDelta.length()>prev.length()+0.5){
+          if (this.zoomDelta.length() > prev.length() + 0.5) {
             this.zoomOut()
-          }else if (this.zoomDelta.length()+0.5<prev.length()){
+          } else if (this.zoomDelta.length() + 0.5 < prev.length()) {
             this.zoomIn()
           }
         }
-      }else{
+      } else {
         this.zoomEnd.set(touch.clientX, touch.clientY)
         this.zoomDelta.subVectors(this.zoomEnd, this.zoomStart)
         if (this.zoomDelta.y > 0) {
@@ -543,7 +560,7 @@ export class ThirdPersonCameraControl {
         } else {
           this.zoomOut()
         }
-        console.error('---',this.zoomDelta)
+        console.error('---', this.zoomDelta)
         this.zoomStart.copy(this.zoomEnd)
       }
     }
@@ -578,11 +595,11 @@ export class ThirdPersonCameraControl {
   }
 
   makeSelectMouse(event) {
-    let touch =event
+    let touch = event
     if (Is.isMobileDevice()) {
       let allTouch = this.allTouches(event)
       if (allTouch.length > 0) {
-         touch = allTouch[0]
+        touch = allTouch[0]
       }
     }
     const mouse = new this.THREE.Vector2()
@@ -602,14 +619,14 @@ export class ThirdPersonCameraControl {
     if (this.raycaster) {
       this.camera.updateMatrixWorld()
       this.raycaster.setFromCamera(pt, this.camera)
-      let scene=this.com.scene
-      let navmesh=scene.getObjectByName('navmesh')
-      if (navmesh){
+      let scene = this.com.scene
+      let navmesh = scene.getObjectByName('navmesh')
+      if (navmesh) {
         //获取寻路的 目标坐标
-        const nav_res = this.raycaster.intersectObject( navmesh )
-        if (nav_res&&nav_res.length>0){
-          let dest=nav_res[0].point
-          this.pathFind.test('demo', this.player.position.clone(), dest,this)
+        const nav_res = this.raycaster.intersectObject(navmesh)
+        if (nav_res && nav_res.length > 0) {
+          let dest = nav_res[0].point
+          this.pathFind.test('demo', this.player.position.clone(), dest, this)
         }
       }
       //获取点击的 物品
@@ -620,7 +637,6 @@ export class ThirdPersonCameraControl {
           for (let i = 0; i < intersects.length; i++) {
             let it = intersects[i]
             if (it.object.myname != 'Sky' && it.object.myname != 'my-axesHelper') {
-
               break
             }
           }
@@ -640,7 +656,7 @@ export class ThirdPersonCameraControl {
       // Firefox
       delta = -event.detail
     }
-    console.error('---','onMouseWheel')
+    // console.error('---','onMouseWheel')
     if (delta > 0) {
       this.zoomOut()
     } else {
@@ -738,7 +754,7 @@ export class ThirdPersonCameraControl {
             this.player.player.rotation.y = dir
           }
           if (isDown) {
-            if(this.pathFind)this.pathFind.clearPath()
+            this.stopPathFind = true
             this.playerIsMoving = true
           }
         }
@@ -767,7 +783,7 @@ export class ThirdPersonCameraControl {
         } else {
           this.player.player.rotation.y = rad + theta - Math.PI / 2
         }
-        if (this.pathFind)this.pathFind.clearPath()
+        this.stopPathFind = true
         this.playerIsMoving = true
       }
     }

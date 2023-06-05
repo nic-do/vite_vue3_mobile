@@ -425,6 +425,14 @@ export default {
     getBox3() {
       return new this.THREE.Box3()
     },
+    getScale(target) {
+      if (!this.v3_ForSize) {
+        this.v3_ForSize = this.getVec3()
+      }
+      this.v3_ForSize.set(0, 0, 0)
+      target.getWorldScale(this.v3_ForSize)
+      return this.v3_ForSize.clone()
+    },
     getSize(target) {
       if (!this.box3ForSize) {
         this.box3ForSize = this.getBox3()
@@ -432,19 +440,7 @@ export default {
       if (!this.v3_ForSize) {
         this.v3_ForSize = this.getVec3()
       }
-      this.box3ForSize.makeEmpty()
-      this.box3ForSize.expandByObject(target)
-      this.box3ForSize.getSize(this.v3_ForSize)
-      return this.v3_ForSize.clone()
-    },
-    getSize2(target) {
-      if (!this.box3ForSize) {
-        this.box3ForSize = this.getBox3()
-      }
-      if (!this.v3_ForSize) {
-        this.v3_ForSize = this.getVec3()
-      }
-      this.box3ForSize.makeEmpty()
+      this.v3_ForSize.set(0, 0, 0)
       this.box3ForSize.setFromObject(target)
       this.box3ForSize.getSize(this.v3_ForSize)
       return this.v3_ForSize.clone()
@@ -783,7 +779,7 @@ export default {
       // cube.position.set(0, 0, 0)
       return cube
     },
-    setAxesHelper(scene,y) {
+    setAxesHelper(scene, y) {
       // 创建一个三维坐标轴
       if (!this.axesHelper) {
         const axesHelper = this.track(new this.THREE.AxesHelper(3))
@@ -874,6 +870,75 @@ export default {
       let size2 = this.getSize2(target)
       console.log('--size--', size)
       console.log('--size2--', size2)
+    },
+
+    test(loadscene) {
+      let self = this
+      let group = null
+
+      // group = new this.THREE.Group()
+      // group.add(loadscene)
+
+      // let bbox = new this.THREE.Box3().setFromObject(group)
+      // let mdlen = bbox.max.x - bbox.min.x //边界的最小坐标值 边界的最大坐标值
+      // let mdhei = bbox.max.y - bbox.min.y
+      // let mdwid = bbox.max.z - bbox.min.z
+      //
+      // let width = self.renderer.domElement.clientWidth
+      // let height = self.renderer.domElement.clientHeight
+      // group.position.set(0, 0, 0)
+      //
+      // let dist = Math.abs(self.camera.position.z - group.position.z - mdwid / 2)
+      // //console.log('dist值为:' + dist );
+      // let vFov = (self.camera.fov * Math.PI) / 180
+      // //console.log('vFov值为:' + vFov );
+      // let vheight = 2 * Math.tan(vFov * 0.5) * dist
+      // //console.log('vheight值为:' + vheight );
+      // let fraction = mdhei / vheight
+      // // console.log('fraction值为:' + fraction );
+      // let finalHeight = height * fraction
+      // //console.log('finalHeight值为:' + finalHeight);
+      // let finalWidth = (finalHeight * mdlen) / mdhei
+      // //console.log('finalWidth值为:' + finalWidth );
+      //
+      // let value1 = width / finalWidth
+      // console.log('value1缩放比例值为:' + value1)
+      // let value2 = height / finalHeight
+      // console.log('value2缩放比例值为:' + value2)
+      //
+      // if (value1 >= value2) {
+      //   group.scale.set(value2, value2, value2)
+      // } else {
+      //   group.scale.set(value1, value1, value1)
+      // }
+      // let bbox2 = new this.THREE.Box3().setFromObject(group)
+      // let mdlen2 = bbox2.max.x - bbox2.min.x
+      // let mdhei2 = bbox2.max.y - bbox2.min.y
+      // let mdwid2 = bbox2.max.z - bbox2.min.z
+      // group.position.set(
+      //   -(bbox2.max.x + bbox2.min.x) / 2,
+      //   -(bbox2.max.y + bbox2.min.y) / 2,
+      //   -(bbox2.max.z + bbox2.min.z) / 2 - (bbox2.max.z - bbox2.min.z) / 2
+      // )
+
+      // let y= this.getSize(group).y
+      // let ratio=y/2
+      // group.scale.multiplyScalar(1/ratio)
+      // group.position.set(0, 0, 0)
+
+      //   self.scene.add(group)
+      // let boxhelper = new this.THREE.BoxHelper(group, 0xbe1915) //外面红色框
+      // self.scene.add(boxhelper)
+      //   console.log('----',this.getSize(group))
+
+      let y = this.getSize(loadscene).y
+      let ratio = y / 2
+      loadscene.scale.multiplyScalar(1 / ratio)
+      console.log('----', this.getSize(loadscene))
+      self.scene.add(loadscene)
+      let boxhelper = new this.THREE.BoxHelper(loadscene, 0xbe1915) //外面红色框
+      self.scene.add(boxhelper)
+      console.log('----', this.getSize(loadscene))
     }
   }
 }

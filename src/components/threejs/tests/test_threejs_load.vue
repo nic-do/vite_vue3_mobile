@@ -277,18 +277,7 @@ const playPositinAudio = function () {
     }
   }
 }
-const setCamera = function (camera, THREE) {
-  //跟模型关系很大
-  let mode = module.data.mode
-  if (mode == 'fbx') {
-    camera.position.set(100, 200, 300)
-  }
-  //需要设置lookAt
-  // 1、受模型有影响 2、受OrbitControls影响
-  if (mode == 'fbx') {
-    camera.lookAt(new THREE.Vector3(0, 100, 0))
-  }
-}
+const setCamera = function (camera, THREE) {}
 const setLight = function (light, THREE) {
   let com = threejsLoadRef.value
   let mode = module.data.mode
@@ -364,34 +353,31 @@ const makePlayer = async function (com, obj, params, callback) {
     let res = await com.getCollisionModel('capsule')
     Capsule = res.Capsule
   }
+  //缩放比例 到指定高度
+  if (obj && params && params.height > 0) {
+    // y / height：表示以高为 height米为准，等比缩放
+    let y = com.getSize(obj).y
+    let ratio = y / params.height
+    obj.scale.multiplyScalar(1 / ratio) //缩放比例
+  }
+  //生成Capsule
   if (Capsule !== undefined) {
     let objSize = com.getSize(obj)
     //刚好能包围模型 x/z 宽度的 球半径
-    let radius = 0.66
-    //gltf模型显示高度是 2.22
-    let playerH = 2.22 //
-    if (params && params.unNormal) {
-      radius = 0.33
-      playerH = 1.11
+    let xx = objSize.x
+    if (obj && params && params.width > 0) {
+      //某些模型 是手张开的，宽度就无法作为 计算半径的标准，需要外部传入
+      xx = params.width
     }
-    let flag = false
-    if (objSize.y < 4 && objSize.y > radius * 2) {
-      //假设这个范围的size是正确的
-      let mx = Math.max(objSize.x, objSize.z)
-      flag = true
-      radius = mx / 2
-      playerH = objSize.y
-    } else if (objSize.y < radius * 2) {
-      let mx = Math.max(objSize.x, objSize.z)
-      radius = mx / 2
-      flag = true
-      playerH = objSize.y
-    }
+    let mx = Math.max(xx, objSize.z)
+    let playerH = objSize.y //模型的高，应该是 和 params.height 一致的
+    let radius = mx / 2 //Capsule的radius
+
     //Capsule高度 0.66*2+0.9
-    let yy = playerH - 2 * radius
+    let yy = playerH - 2 * radius //Capsule的height
     //Capsul是上下两个半球+中间一个圆柱
-    //这里半球球心的y轴 分别为0.66 和 0.66+yy
-    //圆柱的底部y轴是 0.66 顶部是 0.66+yy
+    //这里半球球心的y轴 分别为radius 和 radius+yy
+    //圆柱的底部y轴是 radius 顶部是 radius+yy
     //因此实际需要按模型调整，
     let start = new com.THREE.Vector3(0, 0, 0)
     let end = new com.THREE.Vector3(0, yy, 0)
@@ -404,15 +390,13 @@ const makePlayer = async function (com, obj, params, callback) {
     collider.myname = 'player-collider'
     let player = null
     ///////////////////////////////////////////////////////////////////////////////
-    // 带网格 有的模型获取不准确 调整位置 观察用
-    //cannon不需要额外的 线框
     //octree,如果需要设置成 碰撞体collider or obstacle，需要用这个
     const geometry = com.track(new com.THREE.CapsuleGeometry(radius, yy, 4, 8))
     geometry.myname = 'player-geometry'
     const material = com.track(
       new com.THREE.MeshBasicMaterial({
         color: 0xff0000,
-        opacity: 0, //隐藏网格线
+        // opacity: 0, //隐藏网格线
         alphaTest: 1, //隐藏网格线
         wireframe: true
       })
@@ -427,27 +411,18 @@ const makePlayer = async function (com, obj, params, callback) {
     player.add(obj)
     player.player = obj
     player.collider = collider
-    //这里模型 为什么带个 相对的偏移，可能是相对的中心的问题
-    //-1.07比 1/2的Capsule（-1.11）高看着更合适，？？？这里具体不太理解
-    //大概的可能是因为模型2.22这个值是 估算的 不准确导致的
-    if (flag) {
-      player.player.position.y = -playerH / 2
-    } else {
-      if (params && params.unNormal) {
-        player.player.position.y = -0.53 //2.14
-      } else {
-        player.player.position.y = -1.07 //2.14
-      }
-    }
     player.centerY = playerH / 2
+
+    /// 偏移
+    player.player.position.y = -playerH / 2
     if (params && params.position) {
       player.position.copy(params.position)
     }
+    ///
     if (params && params.tag) {
       let tag = com.getTag(params.tag)
       tag.position.copy(player.position.clone())
       player.tag = tag
-      // tag.position.copy(player.position.clone().setY(player.position.y+0.4))
       com.scene.add(com.track(tag))
     }
     callback(player)
@@ -561,6 +536,7 @@ const loadModule = async (file, materials, resolve, resolveall) => {
       allItems.push({ file: file, obj: obj })
       resolveall(allItems)
     }
+    return Promise.resolve(obj)
   }
 }
 const setLoadModule = async function (scene, THREE) {
@@ -569,55 +545,133 @@ const setLoadModule = async function (scene, THREE) {
     let mode = module.data.mode
     let file = module.data.file
     await initPhycisMgr(com, 1)
-    // let world_file = '/modules/gltf/collision-world.glb'
-    let world_file = '/modules/gltf/level.glb'
-    if (world_file == '/modules/gltf/level.glb') {
-      loadModule('/modules/gltf/level-nav.glb', null, (obj, item) => {
-        if (!obj) {
+    let world_file = '/modules/gltf/collision-world.glb',
+      nav_file = '/modules/gltf/nav.obj'
+    // let world_file = '/modules/gltf/level.glb',
+    //   nav_file = '/modules/gltf/level-nav.glb'
+    loadWorld(world_file, nav_file)
+    if (mode == 'obj') {
+      loadModule('/modules/obj/male02/male02.mtl', null, (materials, item) => {
+        if (!materials) {
           console.log('loadModule', item + '--get failed')
           return
         }
-        if (controls && controls.type) {
-          const _navmesh = obj.scene.getObjectByName('Navmesh_Mesh')
-          controls.pathFind.createZone('demo', _navmesh.geometry)
-          com.track(_navmesh)
-          scene.add(controls.pathFind.getHelper())
-          //查看线
-          // const navWireframe = com.track(
-          //   new THREE.Mesh(
-          //     _navmesh.geometry,
-          //     new THREE.MeshBasicMaterial({
-          //       color: 0x808080,
-          //       wireframe: true
-          //     })
-          //   )
-          // )
-          // scene.add(navWireframe);
-          //
-          //面 透明背景
-          let navmesh = com.track(
-            new THREE.Mesh(
-              _navmesh.geometry,
-              new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                // opacity: 0,
-                transparent: true
-              })
-            )
-          )
-          navmesh.name = 'navmesh'
-          scene.add(navmesh)
-        }
+        materials.preload()
+        loadModule(file, materials, (obj, item) => {
+          if (!obj) {
+            console.log('loadModule', item + '--get failed')
+            return
+          }
+          let position = com.getVec3().set(1, 0.5, 0)
+          if (nav_file == '/modules/gltf/nav.obj') {
+            position.y = -1.244
+          }
+          obj.myname = 'mtl-obj'
+          let wrap = com.track(obj)
+          makePlayer(com, wrap, { height: 1, position: position }, (player) => {
+            scene.add(player)
+            setPlayer(player)
+            com.setMiniMap(player)
+          })
+        })
       })
+      return true
+    } else {
+      loadModule(file, null, null, (all) => {
+        if (all && all.length > 0) {
+          let flag = false
+          let params = {
+            height: 1, //模型 展示的世界高度
+            width: 0, //模型宽度，用来计算 capsule的半径，因为有的模型是展开手臂的，自动获取的宽度就会有问题
+            position: com.getVec3().set(1, 0.65, 0), //坐标偏移量
+            tag: { type: '3d', useSprite: true, name: '我是player' } //
+          }
+          if (nav_file == '/modules/gltf/nav.obj') {
+            params.position.y = -1.244
+          }
+          let animations = null
+          let animations_target = null
+          let wrap = null
+          if (mode == 'gltf' || mode == 'collada' || mode == 'fbx') {
+            let obj = all[0].obj
+            animations = obj.animations
+            animations_target = obj
+            wrap = com.track(obj.scene ? obj.scene : obj)
+            wrap.myname = mode + '-scene'
+            wrap.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true
+                child.receiveShadow = true
+                if (child.material.map && child.material.map.anisotropy != undefined) {
+                  child.material.map.anisotropy = 4
+                }
+              }
+            })
+            if (mode == 'gltf') {
+              //模型比较特殊，肢体部位放大了100倍，外部包围盒scale是1导致，获取尺寸不正确
+              wrap.scale.set(0.01, 0.01, 0.01)
+              params.unNormal = true
+            }
+            flag = true
+          } else if (mode == 'stl' || mode == 'ply') {
+            wrap = com.track(new com.THREE.Mesh())
+            all.forEach((it) => {
+              let mesh = null
+              if (mode == 'stl') {
+                mesh = makeStl(com, THREE, it.file, it.obj)
+              } else if (mode == 'ply') {
+                mesh = makePly(com, THREE, it.file, it.obj)
+              }
+              if (mesh) {
+                flag = true
+                wrap.add(mesh)
+              }
+            })
+          }
+          if (animations) {
+            if (mode == 'fbx') {
+              params.width = 0.5 //模型手臂是展开的
+              const action = com.setMixer(animations_target, animations[0])
+              if (action) {
+                action.play()
+              }
+            } else {
+              createGUI(com, THREE, wrap, animations)
+            }
+          }
+          if (flag) {
+            makePlayer(com, wrap, params, (player) => {
+              if (mode == 'collada') {
+                //模型特殊，轴不标准
+                player.axisy_z = true
+              }
+              scene.add(player)
+              setPlayer(player)
+              com.setMiniMap(player)
+            })
+          }
+        }
+        all.splice(0, all.length)
+      })
+      return true
     }
-    //'/modules/gltf/collision-world.glb'
-    loadModule(world_file, null, (obj, item) => {
-      if (!obj) {
-        console.log('loadModule', item + '--get failed')
-        return
-      }
-      let wrap = null
-      if (item == '/modules/gltf/level.glb') {
+  }
+  return false
+}
+const loadWorld = function (worldfile, navfile) {
+  // let world_file = '/modules/gltf/collision-world.glb' /modules/gltf/nav.obj
+  let com = threejsLoadRef.value
+  let THREE = com.THREE
+  let world_file = worldfile
+  let test_world_file = '/modules/gltf/level.glb'
+  loadModule([world_file, navfile], null, (obj, item) => {
+    if (!obj) {
+      console.log('loadModule', item + '--get failed')
+      return
+    }
+    let wrap = null
+    if (item == world_file) {
+      if (worldfile == test_world_file) {
         const levelMesh = obj.scene.getObjectByName('Cube')
         const levelMat = com.track(
           new THREE.MeshStandardMaterial({
@@ -632,7 +686,6 @@ const setLoadModule = async function (scene, THREE) {
         wrap = com.track(obj.scene)
       }
       wrap.myname = 'world-scene'
-      scene.add(wrap)
       // let world = groundPlane
       if (cannonMgr != null) {
         cannonMgr.setWorld(wrap)
@@ -651,147 +704,45 @@ const setLoadModule = async function (scene, THREE) {
           }
         }
       })
-    })
-    if (mode == 'obj') {
-      loadModule('/modules/obj/male02/male02.mtl', null, (materials, item) => {
-        if (!materials) {
-          console.log('loadModule', item + '--get failed')
-          return
-        }
-        materials.preload()
-        loadModule(file, materials, (obj, item) => {
-          if (!obj) {
-            console.log('loadModule', item + '--get failed')
-            return
-          }
-          obj.scale.multiplyScalar(0.015 * 0.5)
-          let position = com.getVec3().set(1, 1.4, 0)
-          obj.myname = 'mtl-obj'
-          let wrap = com.track(obj)
-          // scene.add(wrap)
-          makePlayer(com, wrap, { position: position }, (player) => {
-            scene.add(player)
-            setPlayer(player)
-            com.setMiniMap(player)
-          })
-        })
-      })
-      return true
     } else {
-      loadModule(
-        file,
-        null,
-        (obj, item) => {
-          if (!obj) {
-            console.log('loadModule', item + '--get failed')
-            return
-          }
-          if (mode == 'gltf') {
-            let wrap = com.track(obj.scene)
-            wrap.myname = 'gltf-scene'
-            wrap.scale.multiplyScalar(0.25)
-            let position = com.getVec3().set(1, 1.4, 0)
-            let tag = { type: '3d', useSprite: true, name: '我是player' }
-            makePlayer(com, wrap, { unNormal: true, position: position, tag: tag }, (player) => {
-              scene.add(player)
-              setPlayer(player)
-              com.setMiniMap(player)
-            })
-            wrap.traverse((child) => {
-              if (child.isMesh) {
-                child.castShadow = true
-                child.receiveShadow = true
-                if (child.material.map) {
-                  child.material.map.anisotropy = 4
-                }
-              }
-            })
-            if (controls && controls.type == 'first') {
-              controls.setEnable(true)
-            }
-            createGUI(com, THREE, wrap, obj.animations)
-            obj = null
-          } else if (mode == 'fbx') {
-            let wrap = com.track(obj)
-            // scene.add(wrap)
-            obj.scale.multiplyScalar(0.01)
-            obj.myname = 'fbx-obj'
-            const action = com.setMixer(obj, obj.animations[0])
-            obj.traverse(function (child) {
-              if (child.isMesh) {
-                child.castShadow = true
-                child.receiveShadow = true
-              }
-            })
-            if (action) {
-              action.play()
-            }
-            let position = com.getVec3().set(1, 1.4, 0)
-            makePlayer(com, wrap, { position: position }, (player) => {
-              scene.add(player)
-              setPlayer(player)
-              com.setMiniMap(player)
-            })
-          } else if (mode == 'collada') {
-            obj.scene.scale.multiplyScalar(0.5 * 0.4)
-            let position = com.getVec3().set(1, 0, 0)
-            modelAnimate = obj.scene
-            obj.scene.myname = 'collada-scene'
-            let wrap = com.track(obj.scene)
-            // scene.add(wrap)
-            makePlayer(com, wrap, { position: position }, (player) => {
-              scene.add(player)
-              player.axisy_z = true
-              setPlayer(player)
-              com.setMiniMap(player)
-            })
-          } else if (mode == 'stl') {
-            // let mesh = makeStl(com,THREE,item, obj)
-            // scene.add(mesh)
-          } else if (mode == 'ply') {
-            // let mesh = makePly(com, THREE, item, obj)
-            // scene.add(mesh)
-          }
-        },
-        (all) => {
-          if (all && all.length > 0) {
-            if (mode == 'stl' || mode == 'ply') {
-              let flag = false
-              let group = com.track(new com.THREE.Mesh())
-              all.forEach((it) => {
-                let mesh = null
-                if (mode == 'stl') {
-                  mesh = makeStl(com, THREE, it.file, it.obj)
-                } else if (mode == 'ply') {
-                  mesh = makePly(com, THREE, it.file, it.obj)
-                }
-                if (mesh) {
-                  flag = true
-                  group.add(mesh)
-                }
-              })
-              if (flag) {
-                let position = com.getVec3().set(1, 0.9, 0)
-                if (mode == 'ply') {
-                  group.scale.multiplyScalar(0.5)
-                  position = com.getVec3().set(1, 1.4, 0)
-                }
-
-                makePlayer(com, group, { position: position }, (player) => {
-                  scene.add(player)
-                  setPlayer(player)
-                  com.setMiniMap(player)
-                })
-              }
-            }
-          }
-          all.splice(0, all.length)
-        }
+      let _navmesh = null
+      if (world_file == test_world_file) {
+        _navmesh = obj.scene.getObjectByName('Navmesh_Mesh')
+      } else {
+        _navmesh = obj.getObjectByName('Navmesh')
+        _navmesh.position.x = -20
+        _navmesh.position.z = -10
+      }
+      controls.pathFind.createZone('demo', _navmesh.geometry)
+      com.track(_navmesh)
+      com.scene.add(controls.pathFind.getHelper())
+      //查看线
+      // const navWireframe = com.track(
+      //   new THREE.Mesh(
+      //     _navmesh.geometry,
+      //     new THREE.MeshBasicMaterial({
+      //       color: 0x808080,
+      //       wireframe: true
+      //     })
+      //   )
+      // )
+      // com.scene.add(navWireframe);
+      //面 透明背景
+      let material = com.track(
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          // opacity: 0,
+          transparent: true
+        })
       )
-      return true
+      material.myname = 'nav-material'
+      wrap = com.track(new THREE.Mesh(_navmesh.geometry, material))
+      wrap.name = 'navmesh'
     }
-  }
-  return false
+    if (wrap) {
+      com.scene.add(wrap)
+    }
+  })
 }
 const makePly = function (com, THREE, item, obj) {
   obj.computeVertexNormals()
@@ -882,6 +833,8 @@ const createGUI = async function (com, THREE, model, animations) {
   const emotes = ['Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp']
   await com.getGui()
   com.gui = com.track(new com.GUI())
+  let title = com.gui.domElement.getElementsByClassName('title')
+  title[0].removeAttribute('tabindex') //影响space按键
   com.gui.domElement.style.top = '88px' //可以调整位置
   com.gui.domElement.style.left = '0px' //可以调整位置
   com.gui.add({ showStats: true }, 'showStats').onChange(function (value) {
@@ -924,63 +877,63 @@ const createGUI = async function (com, THREE, model, animations) {
   com.mixer = mixer
   let actions = {}
   actionsTotal = actions
+  if (animations.length > 0) {
+    for (let i = 0; i < animations.length; i++) {
+      const clip = animations[i]
+      const action = mixer.clipAction(clip)
+      actions[clip.name] = action
 
-  for (let i = 0; i < animations.length; i++) {
-    const clip = animations[i]
-    const action = mixer.clipAction(clip)
-    actions[clip.name] = action
-
-    if (emotes.indexOf(clip.name) >= 0 || states.indexOf(clip.name) >= 4) {
-      action.clampWhenFinished = true
-      action.loop = THREE.LoopOnce
-    }
-  }
-
-  // states
-  const statesFolder = com.gui.addFolder('States')
-  com.gui.close() //主面板关闭
-
-  const clipCtrl = statesFolder.add(api, 'state').options(states)
-
-  clipCtrl.onChange(function () {
-    fadeToAction(api.state, 0.5)
-  })
-  //默认打开 折叠面板
-  statesFolder.open() //子面板打开
-  //   statesFolder.close()
-  // emotes
-  const emoteFolder = com.gui.addFolder('Emotes')
-  function createEmoteCallback(name) {
-    api[name] = function () {
-      fadeToAction(name, 0.2)
-
-      mixer.addEventListener('finished', restoreState)
+      if (emotes.indexOf(clip.name) >= 0 || states.indexOf(clip.name) >= 4) {
+        action.clampWhenFinished = true
+        action.loop = THREE.LoopOnce
+      }
     }
 
-    emoteFolder.add(api, name)
+    // states
+    const statesFolder = com.gui.addFolder('States')
+    com.gui.close() //主面板关闭
+
+    const clipCtrl = statesFolder.add(api, 'state').options(states)
+
+    clipCtrl.onChange(function () {
+      fadeToAction(api.state, 0.5)
+    })
+    //默认打开 折叠面板
+    statesFolder.open() //子面板打开
+    //   statesFolder.close()
+    // emotes
+    const emoteFolder = com.gui.addFolder('Emotes')
+    function createEmoteCallback(name) {
+      api[name] = function () {
+        fadeToAction(name, 0.2)
+
+        mixer.addEventListener('finished', restoreState)
+      }
+
+      emoteFolder.add(api, name)
+    }
+
+    for (let i = 0; i < emotes.length; i++) {
+      createEmoteCallback(emotes[i])
+    }
+
+    emoteFolder.open() //子面板打开
+    //   emoteFolder.close()
+
+    // expressions
+    face = model.getObjectByName('Head_4')
+    const expressionFolder = com.gui.addFolder('Expressions')
+    if (face) {
+      const expressions = Object.keys(face.morphTargetDictionary)
+      for (let i = 0; i < expressions.length; i++) {
+        expressionFolder.add(face.morphTargetInfluences, i, 0, 1, 0.01).name(expressions[i])
+      }
+    }
+    activeAction = actions['Walking']
+    if (activeAction) activeAction.play()
+    expressionFolder.open() //子面板打开
   }
 
-  for (let i = 0; i < emotes.length; i++) {
-    createEmoteCallback(emotes[i])
-  }
-
-  emoteFolder.open() //子面板打开
-  //   emoteFolder.close()
-
-  // expressions
-  face = model.getObjectByName('Head_4')
-
-  const expressions = Object.keys(face.morphTargetDictionary)
-  const expressionFolder = com.gui.addFolder('Expressions')
-
-  for (let i = 0; i < expressions.length; i++) {
-    expressionFolder.add(face.morphTargetInfluences, i, 0, 1, 0.01).name(expressions[i])
-  }
-
-  activeAction = actions['Walking']
-  activeAction.play()
-
-  expressionFolder.open() //子面板打开
   //   expressionFolder.close()
 }
 function restoreState() {
