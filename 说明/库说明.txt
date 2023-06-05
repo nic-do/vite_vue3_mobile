@@ -66,3 +66,7 @@ vue-lazyload            不需要：懒加载：vant已经有
 h5-vue-scroller
 multistreamsmixer
 vue-global-api
+
+face-api.js 人脸识别
+openCV.js
+tracking.js
