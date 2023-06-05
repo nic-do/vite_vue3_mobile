@@ -170,10 +170,18 @@ export default {
         title: '页面切换数据交互',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
+        this.gridItems.push({
+            title: 'webrtc',
+            url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+        })
       this.gridItems.push({
         title: 'testthree',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
+        this.gridItems.push({
+            title: 'testAframe',
+            url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+        })
 
       // for (var i = 0; i < 3; i++) {
       //   this.gridItems.push({
@@ -250,8 +258,13 @@ export default {
           data={
               data: { userId: '123' }
           }
-      } else if (val.title == 'testthree') {
+      }else if(val.title=='webrtc'){
+          name='test_video'
+      }else if (val.title == 'testthree') {
          name='test_threejs_load'
+          // name='testthree'
+      }else if (val.title == 'testAframe') {
+          name='test_threejs_load'
           // name='testthree'
       }
 
