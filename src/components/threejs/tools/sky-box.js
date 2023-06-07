@@ -26,7 +26,7 @@ export class SkyBox {
   async getSkyAddon() {
     if (!this.Sky) {
       let load = 'sky-addons'
-      let lib = await import(`./${load}.js`).catch((err) => {
+      let lib = await import(`./sky/${load}.js`).catch((err) => {
         console.log('--sky-addons-load--', err)
       })
       if (lib.default != undefined) {
