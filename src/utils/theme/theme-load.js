@@ -1,7 +1,7 @@
 function loadCssCode(code, type, reset) {
-  var head = document.getElementsByTagName('head')[0]
-  var links = document.getElementsByTagName('link')
-  for (var i = links.length - 1; i >= 0; i--) {
+  let head = document.getElementsByTagName('head')[0]
+  let links = document.getElementsByTagName('link')
+  for (let i = links.length - 1; i >= 0; i--) {
     if (links[i].name == 'custom-theme') {
       if (links[i].theme == type) {
         //也可以直接remove，再重新添加
@@ -17,7 +17,7 @@ function loadCssCode(code, type, reset) {
       }
     }
   }
-  var style = document.createElement('style')
+  let style = document.createElement('style')
   // style.type = 'text/css'
   style.rel = 'stylesheet'
   style.setAttribute('name', 'custom-theme')
@@ -34,8 +34,8 @@ function loadCssCode(code, type, reset) {
 }
 function loadPublicCSS(url) {
   //1、需要处理重复添加的问题
-  var links = document.getElementsByTagName('link')
-  for (var i = 0; i < links.length; i++) {
+  let links = document.getElementsByTagName('link')
+  for (let i = 0; i < links.length; i++) {
     if (links[i].href.substr(-url.length) == url) return
   }
   const element = document.createElement('link')

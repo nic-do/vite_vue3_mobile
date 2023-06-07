@@ -264,8 +264,8 @@ export default {
          name='test_threejs_load'
           // name='testthree'
       }else if (val.title == 'testAframe') {
-          name='test_threejs_load'
-          // name='testthree'
+          // name='test_threejs_load'
+          name='testthree'
       }
 
       if (name) {
