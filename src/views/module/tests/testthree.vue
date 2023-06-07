@@ -128,7 +128,7 @@ nextTick(() => {
       containerRef.value.addEventListener(
         'touchstart',
         (event) => {
-          // document.body.requestPointerLock()
+          document.body.requestPointerLock()
           isMove = false
           touchMove = event.touches[0]
           mouseTime = performance.now()
@@ -174,7 +174,7 @@ nextTick(() => {
       )
     } else {
       containerRef.value.addEventListener('mousedown', () => {
-        // document.body.requestPointerLock()
+        document.body.requestPointerLock()
 
         mouseTime = performance.now()
       })
@@ -242,6 +242,7 @@ if (Is.isMobileDevice()) {
     if (document.pointerLockElement === document.body) {
       camera.rotation.y -= event.movementX / 500
       camera.rotation.x -= event.movementY / 500
+        console.log('----','00000000')
     }
   })
 }
