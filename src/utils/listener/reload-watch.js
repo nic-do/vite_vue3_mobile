@@ -1,10 +1,10 @@
 let _beforeUnload_time = 0,
-    _unload_time = 0
-let _listener=null
-let beforeunload=function (){
+  _unload_time = 0
+let _listener = null
+let beforeunload = function () {
   _beforeUnload_time = new Date().getTime()
 }
-let unload=function (){
+let unload = function () {
   _unload_time = new Date().getTime()
   if (_unload_time - _beforeUnload_time <= 1) {
     //业务代码
@@ -17,12 +17,13 @@ let unload=function (){
   clearListener()
 }
 const setListener = function (listener) {
-  _listener=listener
-  window.addEventListener('beforeunload',beforeunload )
+  _listener = listener
+  window.addEventListener('beforeunload', beforeunload)
   window.addEventListener('unload', unload)
 }
 const clearListener = function () {
+  _listener = null
   window.removeEventListener('beforeunload', beforeunload)
   window.removeEventListener('unload', unload)
 }
-export default { setListener,clearListener }
+export default { setListener, clearListener }
