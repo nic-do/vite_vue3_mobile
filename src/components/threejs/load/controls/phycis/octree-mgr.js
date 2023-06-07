@@ -168,7 +168,7 @@ export class OctreeMgr extends Mgr {
           // }
         }
         tag.visible = npc.visible
-        tag.position.copy(pp.setY(pp.y + 1))//偏移跟 模型原点有关
+        tag.position.copy(pp.setY(pp.y + 0.5))//偏移跟 模型原点有关
       }
     }
   }
