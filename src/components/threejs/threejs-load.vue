@@ -15,6 +15,8 @@ import { DashLinesBoxTool } from '@/components/threejs/tools/dash-lines-box-tool
 import { isPromise } from 'vant/es/utils'
 import { SkyBox } from '@/components/threejs/tools/sky-box'
 import { tag2D, labelRenderer as labelRenderer2D } from '@/components/threejs/tools/tag/tag2d'
+import LoadHelper from '@/components/threejs/tools/load-helper'
+import { checkRequestAnimationFrame } from '@/components/threejs/tools/requestFrame'
 import {
   tag3D,
   tag3DSprite,
@@ -45,9 +47,13 @@ export default {
         if (oldVal != undefined && newVal != undefined) {
           nextTick(() => {
             if (this.scene) {
-              this.destroyResource()
-              this.initFlag = false
-              this.init()
+              if (newVal.clear) {
+                this.destroyResource()
+                this.initFlag = false
+                this.init()
+              } else {
+                this.handleModule(this.scene)
+              }
             }
           })
         }
@@ -141,6 +147,7 @@ export default {
         // 在外层定义resMgr和track
         this.resMgr = new ResourceTracker()
         this.setShowStats(this.showStats)
+        checkRequestAnimationFrame()
 
         nextTick(async () => {
           await this.getLoad(this.module.mode)
@@ -152,63 +159,35 @@ export default {
     },
     async getCollisionModel(name) {
       if (!this.collisionModel[name]) {
-        let lib = await import(`./load/collision/model/${name}.js`).catch((err) => {
-          console.log('--THREE-collision-model--', err)
-        })
-        if (lib.default != undefined) {
-          this.collisionModel[name] = lib.default
-        }
+        let res = await LoadHelper.getCollisionModel(name)
+        if (res) this.collisionModel[name] = res
       }
       return this.collisionModel[name]
     },
     async getCollisionMgr(name) {
       if (!this.collision[name]) {
-        let lib = await import(`./load/collision/${name}.js`).catch((err) => {
-          console.log('--THREE-collision--', err)
-        })
-        if (lib) {
-          if (lib.default != undefined) {
-            this.collision[name] = lib.default
-          } else if (name == 'cannon-es') {
-            this.collision[name] = lib
-          }
-        }
+        let res = await LoadHelper.getCollisionMgr(name)
+        if (res) this.collision[name] = res
       }
       return this.collision[name]
     },
-    async getLoad(mode) {
+    async getLoad() {
       //必须的
-      let load = 'load'
-      let lib = await import(`./load/${load}.js`).catch((err) => {
-        console.log('--THREE-load--', err)
-      })
-      if (lib.default != undefined) {
-        this.THREE = lib.default
-      }
+      let res = await LoadHelper.getLoad()
+      if (res) this.THREE = res
     },
     async getLoader(mode) {
       //按文件格式 加载 需要的loader
       if (this.loaders[mode] == null) {
-        let libLoader = await import(`./load/loader/${mode}.js`).catch((err) => {
-          console.log('--THREE-loader--', err)
-        })
-        let Loader = libLoader ? libLoader.default : null
-        if (Loader) {
-          this.loaders[mode] = new Loader()
-        }
+        let res = await LoadHelper.getLoader(mode)
+        if (res) this.loaders[mode] = res
       }
       return this.loaders[mode]
     },
     async getGui() {
       if (!this.GUI) {
-        //gui，非必须
-        let guiname = 'gui'
-        let libGui = await import(`./load/gui/${guiname}.js`).catch((err) => {
-          console.log('--THREE-gui--', err)
-        })
-        if (libGui.default != undefined) {
-          this.GUI = markRaw(libGui.default)
-        }
+        let res = await LoadHelper.getGui()
+        if (res) this.GUI = res
       }
       return this.GUI
     },
@@ -238,8 +217,6 @@ export default {
 
           this.scene.clear()
           this.resMgr.clearRender(this.renderer)
-
-          //cancelAnimationFrame(animationID)
           this.THREE.Cache.clear()
 
           if (this.stats) {
@@ -255,6 +232,10 @@ export default {
               this.controls.dispose()
             }
           }
+          if (this.rendererIdMiniMap) cancelAnimationFrame(this.rendererIdMiniMap)
+          if (this.rendererId) cancelAnimationFrame(this.rendererId)
+          this.rendererIdMiniMap = null
+          this.rendererId = null
           this.lod = null
           this.renderer2D = null
           this.renderer3D = null
@@ -279,10 +260,10 @@ export default {
             this.dashLinesBoxTool = null
           }
         }
-        reloadWatch.clearListener()
       } catch (e) {
         console.error('--destroyResource--', e)
       }
+      reloadWatch.clearListener()
     },
     logInfo() {
       this.resMgr.logRenderInfo(this.renderer)
@@ -341,7 +322,6 @@ export default {
       if (this.clock) {
         delta = this.clock.getDelta()
       }
-
       if (delta && this.mixer) {
         this.mixer.update(delta)
       }
@@ -352,7 +332,6 @@ export default {
       if (IS.isFunction(this.setAnimate)) {
         this.setAnimate(delta, this.camera, this.scene, this.THREE)
       }
-
       //////////////////////////////////////////////////////////////////////////////////////
       if (this.showTag) {
         if (!this.renderer2D && this.$refs.canvasRef) {
@@ -362,16 +341,31 @@ export default {
         if (this.renderer2D) this.renderer2D.render(this.scene, this.camera)
         if (this.renderer3D) this.renderer3D.render(this.scene, this.camera)
       }
-
+      // let time = new Date().getTime()
+      // let dtime = time
       if (this.renderer) {
+        //这里的两个renderer 耗时比较大，加起来要120多ms，
+        //miniMap单独使用requestAnimationFrame
+        //可以是此 animate 执行总时间减小一般
         this.renderer.render(this.scene, this.camera)
-
-        if (this.miniMap) {
-          this.miniMap.update()
+        // dtime = new Date().getTime() - time
+        // console.log('--6-', dtime)
+        let miniMap = this.miniMap
+        if (miniMap) {
+          if (this.rendererIdMiniMap != undefined) {
+            //这里依赖于此处的 定时操作，可能存在 上一次未执行完的request，所以先cancel
+            //也可以在  miniMap自己单独使用requestAnimationFrame，就不用每次先cancel了
+            cancelAnimationFrame(this.rendererIdMiniMap)
+            this.rendererIdMiniMap = null
+          }
+          //需要bind，不然找不到内部this
+          this.rendererIdMiniMap = requestAnimationFrame(miniMap.update.bind(miniMap))
         }
+        // dtime = new Date().getTime() - time
+        // console.log('--7-', dtime)
       }
+
       if (this.stats) this.stats.update()
-      requestAnimationFrame(this.animate)
 
       const resizeRendererToDisplaySize = (renderer) => {
         if (renderer) {
@@ -402,6 +396,7 @@ export default {
         this.camera.aspect = canvasEl.width / canvasEl.height //canvasEl.clientWidth / canvasEl.clientHeight
         this.camera.updateProjectionMatrix()
       }
+      this.rendererId = requestAnimationFrame(this.animate)
     },
     getTag(params) {
       let tag = null
@@ -702,7 +697,14 @@ export default {
           this.getOrbitControls()
         }
       }
+      this.handleModule(scene)
+      ///////////////////////////////////////////////////////////////////////////////////////////////////////
+      this.stopAnimate = false
 
+      this.rendererId = requestAnimationFrame(this.animate)
+    },
+    async handleModule(scene) {
+      // this.loadModule(scene)
       if (IS.isFunction(this.setLoadModule)) {
         let res = this.setLoadModule(scene, this.THREE)
         if (res != null) {
@@ -711,22 +713,15 @@ export default {
               console.log('--setLoadModule--', e)
             })
             if (!result) {
-              this.handleModule(scene)
+              await this.loadModule(scene)
             }
           }
         } else {
-          this.handleModule(scene)
+          await this.loadModule(scene)
         }
       } else {
-        this.handleModule(scene)
+        await this.loadModule(scene)
       }
-      ///////////////////////////////////////////////////////////////////////////////////////////////////////
-      this.stopAnimate = false
-
-      requestAnimationFrame(this.animate)
-    },
-    handleModule(scene) {
-      this.loadModule(scene)
     },
     async loadModule(scene) {
       //声明一个加载器，加载我们下载的模型,并把它添加到场景中，在animate函数上面添加代码:
@@ -760,7 +755,8 @@ export default {
       }
     },
     setMiniMap(target) {
-      this.miniMap = markRaw(new MiniMap({ com: this, target, mapSize: 15, mapRenderSize: 150 }))
+      if (!this.miniMap)
+        this.miniMap = markRaw(new MiniMap({ com: this, target, mapSize: 15, mapRenderSize: 150 }))
     },
     makeCube(tag, wireframe, color) {
       let material = this.track(

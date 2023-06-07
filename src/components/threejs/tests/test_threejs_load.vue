@@ -23,6 +23,10 @@ import { OctreeMgr } from '@/components/threejs/load/controls/phycis/octree-mgr'
 
 import JoyStick from '@/components/threejs/joy-stick/joy-stick.vue'
 import { PositionalAudioHelper } from 'three/addons/helpers/PositionalAudioHelper.js'
+import PlayerMake from '@/components/threejs/tests/player-make'
+import ModuleLoad from '@/components/threejs/tests/module-load'
+import AudioMake from '@/components/threejs/tests/audio-make'
+import WorldLoad from '@/components/threejs/tests/world-load'
 const props = defineProps(['relationKey'])
 
 ////////////////////////////////////
@@ -129,7 +133,8 @@ const module = reactive({
   data: {
     file: '/modules/gltf/RobotExpressive.glb',
     mode: 'gltf',
-    name: 'glb'
+    name: 'glb',
+    clear: false
   }
 })
 const threejsLoadRef = ref('threejsLoadRef')
@@ -137,166 +142,65 @@ const showActionSheet = ref(false)
 
 const setScene = function (scene, THREE) {
   scene.background = new THREE.Color(0x72645b)
-  // if (module.data.mode == 'fbx') {
-  //   scene.fog = new THREE.Fog(0xe0e0e0, 200, 1000)
-  // } else {
-  //   scene.fog = new THREE.Fog(0xe0e0e0, 10, 50)
-  // }
 }
-// let cameraTarget = null
+
 let cameraAudio = null
+let mmdAniHelper = null
+//测试将mmd 转成postion模式
+let positionMmdMusicMode = true
 const playAudio = function () {
   if (threejsLoadRef.value && !cameraAudio) {
     let com = threejsLoadRef.value
     if (!cameraAudio) {
-      cameraAudio = com.createAudio(positionMmdMusicMode)
-      // cameraAudio.setVolume(0.1)
-      //   cameraAudio.setVolume(0.1)
+      cameraAudio = AudioMake.mmdAudio(com, positionMmdMusicMode, (data) => {
+        makePlayer(com, data.mesh, data.params, (player) => {
+          com.lodLevel(player, 2)
+          com.scene.add(player)
+
+          mmdAniHelper = data.helper
+          controls.phycisMgr.addNpc(player)
+          controls.phycisMgr.addObstacles(player)
+        })
+      })
     }
     if (cameraAudio) {
       com.camera.add(cameraAudio.listener)
-      testmmdAudio()
-    }
-  }
-}
-let mmdAniHelper = null
-//测试将mmd 转成postion模式
-let positionMmdMusicMode = true
-const testmmdAudio = async function () {
-  let com = threejsLoadRef.value
-  if (com) {
-    let url = '/audio/mmd/miku/miku_v2.pmd'
-    let mLoader = await getLoader(url, null)
-    if (mLoader) {
-      let helper = await com.getLoader('mmd-ani-helper')
-      let mesh = await doLoad(mLoader, url).catch((e) => {})
-      com.track(mesh)
-      if (mesh) {
-        //下面部分需要ammo
-        let resAmmo = await com.getCollisionMgr('ammo')
-        let Ammo = null
-        if (resAmmo) {
-          Ammo = new resAmmo.default()
-        }
-        if (Ammo != null) {
-          Ammo().then(function (AmmoLib) {
-            if (AmmoLib) {
-              window.Ammo = AmmoLib
-              mLoader.loadAnimation(
-                ['/audio/mmd/vmds/wavefile_v2.vmd'],
-                mesh,
-                function (animation) {
-                  com.track(animation)
-                  helper.add(mesh, {
-                    animation: animation,
-                    physics: true
-                  })
-                  const addToControl = () => {
-                    //缩放
-                    mesh.scale.set(0.1, 0.1, 0.1)
-                    //调整初始位置
-                    let pos = com.getVec3()
-                    pos.x = 1.5
-                    pos.y = 1.2
-                    let tag = { type: '3d', useSprite: true, name: '我是npc' }
-                    makePlayer(com, mesh, { noPlayer: true, position: pos, tag: tag }, (player) => {
-                      com.lodLevel(player, 2)
-                      com.scene.add(player)
-
-                      mmdAniHelper = helper
-                      controls.phycisMgr.addNpc(player)
-                      controls.phycisMgr.addObstacles(player)
-                    })
-                  }
-                  if (positionMmdMusicMode) {
-                    if (cameraAudio) {
-                      com.loadAudioFile('/audio/mmd/audios/wavefile_short.mp3', (buffer) => {
-                        cameraAudio.setBuffer(buffer)
-                        cameraAudio.setRefDistance(1)
-                        cameraAudio.setDirectionalCone(180, 230, 0.1)
-                        const helper2 = com.track(new PositionalAudioHelper(cameraAudio, 0.1))
-                        cameraAudio.add(helper2)
-                        helper.add(cameraAudio, { delayTime: (160 * 1) / 30 })
-                        addToControl()
-                      })
-                    }
-                  } else {
-                    com.loadAudioFile('/audio/mmd/audios/wavefile_short.mp3', (buffer) => {
-                      cameraAudio.setBuffer(buffer)
-
-                      helper.add(cameraAudio, { delayTime: (160 * 1) / 30 })
-                      addToControl()
-                    })
-                  }
-                },
-                onProgress
-              )
-            }
-          })
-        }
-      }
     }
   }
 }
 let positionAudio = null
 const positionMusicRef = ref('positionMusicRef')
-const playPositinAudio = function () {
+const playPositionAudio = function () {
   if (threejsLoadRef.value && !positionAudio) {
+    let audioEl = positionMusicRef.value
     let com = threejsLoadRef.value
-    if (!positionAudio) {
-      positionAudio = com.createAudio(true)
-    }
-    if (positionAudio && positionMusicRef.value) {
-      positionAudio.setMediaElementSource(positionMusicRef.value)
-      positionAudio.setRefDistance(1)
-      positionAudio.setDirectionalCone(180, 230, 0.1)
-      let com = threejsLoadRef.value
-      const helper = com.track(new PositionalAudioHelper(positionAudio, 0.1))
-      positionAudio.add(helper)
-      if (positionAudio) {
-        controls.player.add(positionAudio)
-      }
-      loadModule('modules/gltf/BoomBox.glb', null, (obj, item) => {
-        const boomBox = obj.scene
-        boomBox.position.set(1.0, 0.6, 0)
-        boomBox.scale.set(20, 20, 20)
-        boomBox.traverse(function (object) {
-          if (object.isMesh) {
-            object.geometry.rotateY(-Math.PI)
-            object.castShadow = true
-          }
-        })
-        com.track(boomBox)
-        boomBox.myname = 'BoomBox'
-        com.lodLevel(boomBox, 5)
-        com.scene.add(boomBox)
-
-        //必须调用
-        positionMusicRef.value.play()
-      })
-    }
+    positionAudio = AudioMake.positionAudio(com, audioEl, (boomBox) => {
+      com.lodLevel(boomBox, 5)
+      com.scene.add(boomBox)
+      audioEl.play()
+    })
   }
 }
 const setCamera = function (camera, THREE) {}
 const setLight = function (light, THREE) {
-  let com = threejsLoadRef.value
-  let mode = module.data.mode
-  if (mode == 'stl' || mode == 'ply') {
-    //   light.hemLight = com.addHemisphereLight(0x8d7c7c, 0x494966)
-    light.hemLight = com.addHemisphereLight(0xcccccc, 0.4)
-    let dirLight = []
-    dirLight.push(com.addDirectionalLight(0xffffff, 1.35, true))
-    dirLight.push(
-      com.addDirectionalLight(0xffd500, 1, true, (light) => {
-        light.position.set(0.5, 1, -1)
-      })
-    )
-  } else if (mode == 'collada' || mode == 'obj') {
-    light.hemLight = com.addHemisphereLight(0xcccccc, 0.4)
-    light.dirLight = com.addDirectionalLight(0xffffff, 0.8, false, (light) => {
-      if (mode == 'collada') light.position.set(1, 5, 0) //.normalize()
-    })
-  }
+  // let com = threejsLoadRef.value
+  // let mode = module.data.mode
+  // if (mode == 'stl' || mode == 'ply') {
+  //   //   light.hemLight = com.addHemisphereLight(0x8d7c7c, 0x494966)
+  //   light.hemLight = com.addHemisphereLight(0xcccccc, 0.4)
+  //   let dirLight = []
+  //   dirLight.push(com.addDirectionalLight(0xffffff, 1.35, true))
+  //   dirLight.push(
+  //     com.addDirectionalLight(0xffd500, 1, true, (light) => {
+  //       light.position.set(0.5, 1, -1)
+  //     })
+  //   )
+  // } else if (mode == 'collada' || mode == 'obj') {
+  //   light.hemLight = com.addHemisphereLight(0xcccccc, 0.4)
+  //   light.dirLight = com.addDirectionalLight(0xffffff, 0.8, false, (light) => {
+  //     if (mode == 'collada') light.position.set(1, 5, 0) //.normalize()
+  //   })
+  // }
 }
 // let groundPlane = null
 const setGround = function (ground, THREE) {
@@ -323,17 +227,6 @@ const setRender = async function (render, THREE) {
     console.error(e)
   }
   controls = ctrls
-  if (ctrls) {
-    if (!ctrls.type) {
-      if (module.data.mode == 'fbx') {
-        ctrls.target.set(0, 50, 0)
-      } else if (module.data.mode == 'stl') {
-        ctrls.target.set(0, 0, 0)
-      } else {
-        ctrls.target.set(0, 0.5, 0)
-      }
-    }
-  }
   return render
 }
 const setAnimate = async function (delta, camera, scene, THREE) {
@@ -353,90 +246,13 @@ const makePlayer = async function (com, obj, params, callback) {
     let res = await com.getCollisionModel('capsule')
     Capsule = res.Capsule
   }
-  //缩放比例 到指定高度
-  if (obj && params && params.height > 0) {
-    // y / height：表示以高为 height米为准，等比缩放
-    let y = com.getSize(obj).y
-    let ratio = y / params.height
-    obj.scale.multiplyScalar(1 / ratio) //缩放比例
-  }
-  //生成Capsule
-  if (Capsule !== undefined) {
-    let objSize = com.getSize(obj)
-    //刚好能包围模型 x/z 宽度的 球半径
-    let xx = objSize.x
-    if (obj && params && params.width > 0) {
-      //某些模型 是手张开的，宽度就无法作为 计算半径的标准，需要外部传入
-      xx = params.width
-    }
-    let mx = Math.max(xx, objSize.z)
-    let playerH = objSize.y //模型的高，应该是 和 params.height 一致的
-    let radius = mx / 2 //Capsule的radius
-
-    //Capsule高度 0.66*2+0.9
-    let yy = playerH - 2 * radius //Capsule的height
-    //Capsul是上下两个半球+中间一个圆柱
-    //这里半球球心的y轴 分别为radius 和 radius+yy
-    //圆柱的底部y轴是 radius 顶部是 radius+yy
-    //因此实际需要按模型调整，
-    let start = new com.THREE.Vector3(0, 0, 0)
-    let end = new com.THREE.Vector3(0, yy, 0)
-    if (params && params.position) {
-      start.copy(params.position)
-      end.copy(params.position)
-      end.y = params.position.y + yy
-    }
-    let collider = com.track(new Capsule(start, end, radius))
-    collider.myname = 'player-collider'
-    let player = null
-    ///////////////////////////////////////////////////////////////////////////////
-    //octree,如果需要设置成 碰撞体collider or obstacle，需要用这个
-    const geometry = com.track(new com.THREE.CapsuleGeometry(radius, yy, 4, 8))
-    geometry.myname = 'player-geometry'
-    const material = com.track(
-      new com.THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        // opacity: 0, //隐藏网格线
-        alphaTest: 1, //隐藏网格线
-        wireframe: true
-      })
-    )
-    material.myname = 'player-material'
-    player = com.track(new com.THREE.Mesh(geometry, material))
-    // 不带网格 无法生成octree的 collider or obstacle
-    // player = com.track(new com.THREE.Mesh())
-    ///////////////////////////////////////////////////////////////////////
-    player.myname = 'player'
-    // player.position.copy(end.clone().setY(end.y / 2 + radius))
-    player.add(obj)
-    player.player = obj
-    player.collider = collider
-    player.centerY = playerH / 2
-
-    /// 偏移
-    player.player.position.y = -playerH / 2
-    if (params && params.position) {
-      player.position.copy(params.position)
-    }
-    ///
-    if (params && params.tag) {
-      let tag = com.getTag(params.tag)
-      tag.position.copy(player.position.clone())
-      player.tag = tag
-      com.scene.add(com.track(tag))
-    }
+  PlayerMake.getPlayer(com, Capsule, obj, params, (player) => {
     callback(player)
-
     if (params && params.noPlayer) {
       return
     }
-    if (octreeMgr != null) {
-      octreeMgr.setPlayer(player)
-    }
-    if (cannonMgr != null) {
-      cannonMgr.setPlayer(player)
-    }
-  }
+    controls.phycisMgr?.setPlayer(player)
+  })
 }
 let octreeMgr = null
 let cannonMgr = null
@@ -468,88 +284,23 @@ const onProgress = function (xhr) {
     console.log(Math.round(percentComplete, 2) + '% downloaded')
   }
 }
-
-const getLoader = async (file, materials) => {
-  let mLoader = null
-  let com = threejsLoadRef.value
-  if (com) {
-    let suffix = file.split('.')[1]
-    let loaderMode = loaderMap[suffix]
-    if (!loaderMode) {
-      loaderMode = suffix
-    }
-    mLoader = await com.getLoader(loaderMode)
-    if (!mLoader) {
-      return null
-    }
-    if (materials) {
-      if (mLoader.setMaterials != undefined) {
-        mLoader.setMaterials(materials)
-      }
-    }
-  }
-  return mLoader
-}
-const doLoad = async function (mLoader, file) {
-  return new Promise(function (resolve) {
-    mLoader.load(
-      file,
-      (obj) => {
-        let com = threejsLoadRef.value
-        if (obj) {
-          com.track(obj)
-        }
-        resolve(obj)
-      },
-      onProgress
-    )
-  })
-}
 const loadModule = async (file, materials, resolve, resolveall) => {
-  let allItems = []
-  if (Array.isArray(file)) {
-    for (let i = 0; i < file.length; i++) {
-      let item = file[i]
-      let mLoader = await getLoader(item, materials)
-      if (!mLoader) {
-        if (resolve) resolve(null, file)
-      } else {
-        let obj = await doLoad(mLoader, item).catch((e) => {})
-        if (resolveall) {
-          allItems.push({ file: item, obj: obj })
-        }
-        if (resolve) resolve(obj, item)
-      }
-    }
-    if (resolveall) {
-      resolveall(allItems)
-    }
-  } else {
-    let mLoader = await getLoader(file, materials)
-    if (!mLoader) {
-      if (resolve) resolve(null, file)
-      return
-    }
-    let obj = await doLoad(mLoader, file).catch((e) => {})
-    if (resolve) resolve(obj, file)
-    if (resolveall) {
-      allItems.push({ file: file, obj: obj })
-      resolveall(allItems)
-    }
-    return Promise.resolve(obj)
-  }
+  let com = threejsLoadRef.value
+  return await ModuleLoad.loadModule(com, file, materials, resolve, resolveall)
 }
 const setLoadModule = async function (scene, THREE) {
   let com = threejsLoadRef.value
   if (com) {
     let mode = module.data.mode
     let file = module.data.file
-    await initPhycisMgr(com, 1)
+    if (!controls.phycisMgr) await initPhycisMgr(com, 1)
     let world_file = '/modules/gltf/collision-world.glb',
       nav_file = '/modules/gltf/nav.obj'
     // let world_file = '/modules/gltf/level.glb',
     //   nav_file = '/modules/gltf/level-nav.glb'
-    loadWorld(world_file, nav_file)
+    if (!scene.getObjectByName('world')) {
+      await WorldLoad.loadWorld(com, world_file, nav_file, controls.phycisMgr, controls.pathFind)
+    }
     if (mode == 'obj') {
       loadModule('/modules/obj/male02/male02.mtl', null, (materials, item) => {
         if (!materials) {
@@ -562,16 +313,20 @@ const setLoadModule = async function (scene, THREE) {
             console.log('loadModule', item + '--get failed')
             return
           }
-          let position = com.getVec3().set(1, 0.5, 0)
+          let params = { height: 1, position: com.getVec3().set(1, 0.49, 0) }
           if (nav_file == '/modules/gltf/nav.obj') {
-            position.y = -1.244
+            params.position.y = -1.523
+            //
+            params.height = 1.7
+            params.position.y = -1.366
           }
           obj.myname = 'mtl-obj'
           let wrap = com.track(obj)
-          makePlayer(com, wrap, { height: 1, position: position }, (player) => {
+          makePlayer(com, wrap, params, (player) => {
             scene.add(player)
             setPlayer(player)
-            com.setMiniMap(player)
+            //mini-map 跟随
+            setMiniMap(com, player)
           })
         })
       })
@@ -583,11 +338,43 @@ const setLoadModule = async function (scene, THREE) {
           let params = {
             height: 1, //模型 展示的世界高度
             width: 0, //模型宽度，用来计算 capsule的半径，因为有的模型是展开手臂的，自动获取的宽度就会有问题
-            position: com.getVec3().set(1, 0.65, 0), //坐标偏移量
+            position: com.getVec3().set(1, 0, 0), //坐标 偏移量 跟模型高和原点位置有关
             tag: { type: '3d', useSprite: true, name: '我是player' } //
           }
+          //模型差异，偏移量不同
           if (nav_file == '/modules/gltf/nav.obj') {
-            params.position.y = -1.244
+            if (mode == 'gltf') {
+              params.position.y = -1.378
+              params.height = 1.7
+              params.position.y += 0.25
+            } else if (mode == 'fbx') {
+              params.position.y = -1.484
+              params.height = 1.7
+            } else if (mode == 'stl') {
+              params.position.y = -1.094
+              params.height = 1.7
+              params.position.y += 0.44
+            } else if (mode == 'ply') {
+              params.position.y = -1.454
+              params.height = 1.7
+              params.position.y += 0.21
+            } else if (mode == 'collada') {
+              params.position.y = -1.4
+              params.height = 1.7
+              params.position.y += 0.245
+            }
+          } else {
+            if (mode == 'gltf') {
+              params.position.y = 0.65
+            } else if (mode == 'fbx') {
+              params.position.y = 0.52
+            } else if (mode == 'stl') {
+              params.position.y = 0.92
+            } else if (mode == 'ply') {
+              params.position.y = 0.55
+            } else if (mode == 'collada') {
+              params.position.y = 0.6
+            }
           }
           let animations = null
           let animations_target = null
@@ -615,6 +402,7 @@ const setLoadModule = async function (scene, THREE) {
             flag = true
           } else if (mode == 'stl' || mode == 'ply') {
             wrap = com.track(new com.THREE.Mesh())
+            params.width = 0.5
             all.forEach((it) => {
               let mesh = null
               if (mode == 'stl') {
@@ -647,7 +435,7 @@ const setLoadModule = async function (scene, THREE) {
               }
               scene.add(player)
               setPlayer(player)
-              com.setMiniMap(player)
+              setMiniMap(com, player)
             })
           }
         }
@@ -658,91 +446,14 @@ const setLoadModule = async function (scene, THREE) {
   }
   return false
 }
-const loadWorld = function (worldfile, navfile) {
-  // let world_file = '/modules/gltf/collision-world.glb' /modules/gltf/nav.obj
-  let com = threejsLoadRef.value
-  let THREE = com.THREE
-  let world_file = worldfile
-  let test_world_file = '/modules/gltf/level.glb'
-  loadModule([world_file, navfile], null, (obj, item) => {
-    if (!obj) {
-      console.log('loadModule', item + '--get failed')
-      return
-    }
-    let wrap = null
-    if (item == world_file) {
-      if (worldfile == test_world_file) {
-        const levelMesh = obj.scene.getObjectByName('Cube')
-        const levelMat = com.track(
-          new THREE.MeshStandardMaterial({
-            color: 0x606060,
-            flatShading: true,
-            roughness: 1,
-            metalness: 0
-          })
-        )
-        wrap = com.track(new THREE.Mesh(levelMesh.geometry, levelMat))
-      } else {
-        wrap = com.track(obj.scene)
-      }
-      wrap.myname = 'world-scene'
-      // let world = groundPlane
-      if (cannonMgr != null) {
-        cannonMgr.setWorld(wrap)
-        cannonMgr.showHelper(true)
-      }
-      if (octreeMgr != null) {
-        octreeMgr.setWorld(wrap)
-        octreeMgr.showHelper(true)
-      }
-      wrap.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true
-          child.receiveShadow = true
-          if (child.material.map) {
-            child.material.map.anisotropy = 4
-          }
-        }
-      })
-    } else {
-      let _navmesh = null
-      if (world_file == test_world_file) {
-        _navmesh = obj.scene.getObjectByName('Navmesh_Mesh')
-      } else {
-        _navmesh = obj.getObjectByName('Navmesh')
-        _navmesh.position.x = -20
-        _navmesh.position.z = -10
-      }
-      controls.pathFind.createZone('demo', _navmesh.geometry)
-      com.track(_navmesh)
-      com.scene.add(controls.pathFind.getHelper())
-      //查看线
-      // const navWireframe = com.track(
-      //   new THREE.Mesh(
-      //     _navmesh.geometry,
-      //     new THREE.MeshBasicMaterial({
-      //       color: 0x808080,
-      //       wireframe: true
-      //     })
-      //   )
-      // )
-      // com.scene.add(navWireframe);
-      //面 透明背景
-      let material = com.track(
-        new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          // opacity: 0,
-          transparent: true
-        })
-      )
-      material.myname = 'nav-material'
-      wrap = com.track(new THREE.Mesh(_navmesh.geometry, material))
-      wrap.name = 'navmesh'
-    }
-    if (wrap) {
-      com.scene.add(wrap)
-    }
-  })
+const setMiniMap = function (com, player) {
+  com?.setMiniMap(player)
+  let world = com?.scene?.getObjectByName('world')
+  if (world) {
+    let size = com.getSize(world)
+    let max = Math.max(size.x, size.z)
+    com.miniMap?.change(max, 0)
+  }
 }
 const makePly = function (com, THREE, item, obj) {
   obj.computeVertexNormals()
@@ -827,11 +538,14 @@ let activeAction = null
 
 let mmdAudioFlag = true
 let isMMdAudioPaused = false
-let isPositinAudioPaused = false
+let isPositionAudioPaused = false
 const createGUI = async function (com, THREE, model, animations) {
   const states = ['Idle', 'Walking', 'Running', 'Dance', 'Death', 'Sitting', 'Standing']
   const emotes = ['Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp']
   await com.getGui()
+  if (com.gui) {
+    return
+  }
   com.gui = com.track(new com.GUI())
   let title = com.gui.domElement.getElementsByClassName('title')
   title[0].removeAttribute('tabindex') //影响space按键
@@ -853,12 +567,12 @@ const createGUI = async function (com, THREE, model, animations) {
   com.gui.add({ positionAudio: false }, 'positionAudio').onChange(function (value) {
     if (positionMusicRef.value) {
       if (value) {
-        playPositinAudio()
-        if (isPositinAudioPaused) {
+        playPositionAudio()
+        if (isPositionAudioPaused) {
           positionMusicRef.value.play()
         }
       } else {
-        isPositinAudioPaused = true
+        isPositionAudioPaused = true
         positionMusicRef.value.pause()
       }
     }
@@ -891,7 +605,6 @@ const createGUI = async function (com, THREE, model, animations) {
 
     // states
     const statesFolder = com.gui.addFolder('States')
-    com.gui.close() //主面板关闭
 
     const clipCtrl = statesFolder.add(api, 'state').options(states)
 
@@ -932,9 +645,9 @@ const createGUI = async function (com, THREE, model, animations) {
     activeAction = actions['Walking']
     if (activeAction) activeAction.play()
     expressionFolder.open() //子面板打开
-  }
 
-  //   expressionFolder.close()
+    com.gui.close() //主面板关闭
+  }
 }
 function restoreState() {
   threejsLoadRef.value.mixer.removeEventListener('finished', restoreState)

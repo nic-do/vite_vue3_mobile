@@ -47,18 +47,20 @@ export class ThirdPersonCameraControl {
     this.phycisMgr = null
   }
   constructor(com, domElement) {
+    let doc=domElement !== undefined ? domElement : document
     this.logTag = new Date().getTime()
     this.phycisMgr = null
     this.com = com
     this.THREE = com.THREE
     this.camera = markRaw(com.camera)
-    this.domElement = domElement !== undefined ? domElement : document
+    this.domElement = markRaw(doc)
     this.type = 'third'
     this.pathFind = markRaw(new PathFind())
     // API
     this.enabled = false
 
     this.moveSpeed = 2.5
+    this.jumpHeight = 15
 
     this.userZoomSpeed = 1.0
 
@@ -79,13 +81,13 @@ export class ThirdPersonCameraControl {
     this.EPS = 0.000001
     this.PIXELS_PER_ROUND = 1800
 
-    this.rotateStart = new com.THREE.Vector2()
-    this.rotateEnd = new com.THREE.Vector2()
-    this.rotateDelta = new com.THREE.Vector2()
+    this.rotateStart = markRaw(new com.THREE.Vector2())
+    this.rotateEnd = markRaw(new com.THREE.Vector2())
+    this.rotateDelta = markRaw(new com.THREE.Vector2())
 
-    this.zoomStart = new com.THREE.Vector2()
-    this.zoomEnd = new com.THREE.Vector2()
-    this.zoomDelta = new com.THREE.Vector2()
+    this.zoomStart = markRaw(new com.THREE.Vector2())
+    this.zoomEnd = markRaw(new com.THREE.Vector2())
+    this.zoomDelta = markRaw(new com.THREE.Vector2())
 
     this.phiDelta = 0
     this.thetaDelta = 0
@@ -95,20 +97,28 @@ export class ThirdPersonCameraControl {
     this.playerIsMoving = false
     this.joyStickRad = -1000
     this.keyState = {}
-    this.STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 }
+    this.STATE = markRaw({ NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 })
     this.state = this.STATE.NONE
 
     this.STEPS_PER_FRAME = 5
     this.GRAVITY = 30
-    this.playerVelocity = new com.THREE.Vector3()
-    this.velocityCheck = new com.THREE.Vector3(0, 0, 0)
+    this.playerVelocity = markRaw(new com.THREE.Vector3())
     this.playerOnFloor = true
 
     this.callback_joyStickJump = null
-    this.rotateQuat = new com.THREE.Quaternion()
-    this.rotateAxis = new com.THREE.Vector3(0, 0, 0)
+    this.rotateQuat = markRaw(new com.THREE.Quaternion())
+    this.rotateAxis = markRaw(new com.THREE.Vector3(0, 0, 0))
+    this.moveQuat = markRaw({
+      useSmooth:true,
+      rotateQuat2: new com.THREE.Quaternion(),
+      rotateAxis2: new com.THREE.Vector3(0, 0, 0),
+      pathFind: {
+        dest: null,
+        flag: false
+      }
+    })
 
-    this.tagScale = new com.THREE.Vector3(0.01, 0.02, 0.01)
+    this.tagScale = markRaw(new com.THREE.Vector3(0.01, 0.02, 0.01))
 
     this.keyDown = this.onKeyDown.bind(this)
     this.keyUp = this.onKeyUp.bind(this)
@@ -124,7 +134,7 @@ export class ThirdPersonCameraControl {
   }
 
   setPlayer(player) {
-    this.player = player
+    this.player = markRaw(player)
     if (player && this.THREE) {
       this.center = new this.THREE.Vector3(player.position.x, player.position.y, player.position.z)
     } else {
@@ -197,7 +207,6 @@ export class ThirdPersonCameraControl {
     // an object traversing another too quickly for detection.
     for (let i = 0; i < this.STEPS_PER_FRAME; i++) {
       this.checkKeyStates(deltaTime)
-
       let theta = 0
       let radius = 0
       if (this.type == 'third') {
@@ -246,7 +255,7 @@ export class ThirdPersonCameraControl {
     }
   }
 
-  checkPlayer() {
+  checkPlayer(pathFinding) {
     if (this.phycisMgr) {
       if (this.phycisMgr.mgrType == 'octree' && this.phycisMgr.worldOctree) {
         const result = this.phycisMgr.worldOctree.capsuleIntersect(this.player.collider)
@@ -259,8 +268,45 @@ export class ThirdPersonCameraControl {
             velocity.addScaledVector(result.normal, -result.normal.dot(velocity))
           }
           const deltaPosition = result.normal.multiplyScalar(result.depth)
+          if (this.playerOnFloor && pathFinding) {
+            deltaPosition.x = deltaPosition.z = 0
+          }
           this.player.collider.translate(deltaPosition)
         }
+      }
+    }
+  }
+  smoothRotateParam(destRotation, destPosition) {
+    let moveQuat = this.moveQuat
+    if (destRotation) {
+      if (this.player.axisy_z) {
+        //有个模型轴有问题，不能用quaternion去平滑
+        this.player.player.rotation.z = destRotation
+        moveQuat.destRotation = destRotation
+        return
+      } else {
+        if (!moveQuat.useSmooth){
+          //直接旋转，不用平滑
+          this.player.player.rotation.y = destRotation
+          moveQuat.destRotation = destRotation
+          return;
+        }
+        moveQuat.rotateAxis2.set(0, 1, 0)
+      }
+      let flag = true
+      if (destPosition) {
+        // 只有寻路会走此处
+        flag = !moveQuat.pathFind.dest || !destPosition.equals(moveQuat.pathFind.dest)
+      }
+      if (flag) {
+        moveQuat.destRotation = destRotation
+        moveQuat.pathFind.dest = destPosition
+        moveQuat.pathFind.flag = false
+        moveQuat.rotateQuat2.setFromAxisAngle(moveQuat.rotateAxis2, destRotation)
+        moveQuat.rotateToQuat = moveQuat.rotateQuat2.clone()
+      } else if (destPosition && moveQuat.pathFind.flag) {
+        moveQuat.destRotation = destRotation
+        //需要不断校验前进方向
       }
     }
   }
@@ -274,29 +320,33 @@ export class ThirdPersonCameraControl {
     if (space) {
       this.keyState[32] = false
       if (this.playerOnFloor) {
-        velocity.y = 15
+        velocity.y = this.jumpHeight
       }
     }
-    let pathFinding = false
     let dest_pathFind = null
     if (this.playerOnFloor) {
       let dest = this.pathFind?.getDest()
+      let rotation = null
       if (dest) {
-        dest_pathFind = dest
-        pathFinding = true
-        if (this.player.axisy_z) {
-          //有个模型轴有问题
-          this.player.player.rotation.z = dest.rotation
-        } else {
-          this.player.player.rotation.y = dest.rotation
-        }
+        // dest_pathFind = dest
+        rotation = this.pathFind.rotations(this, this.player.position, dest.position)
+        //注：主要是为了 旋转平滑用
+        this.smoothRotateParam(rotation, dest.position)
       }
-      if (this.playerIsMoving || pathFinding) {
-        let rotate = this.player.player.rotation.y
-        if (this.player.axisy_z) {
-          //有个模型轴有问题
-          rotate = this.player.player.rotation.z
+      let moveQuat = this.moveQuat
+      if (moveQuat.rotateToQuat != undefined) {
+        if (!this.player.player.quaternion.equals(moveQuat.rotateToQuat)) {
+          this.player.player.quaternion.rotateTowards(moveQuat.rotateToQuat, 15 * deltaTime)
+        } else if (dest) {
+          moveQuat.pathFind.flag = true
+          dest_pathFind = dest
         }
+      } else if (dest) {
+        dest_pathFind = dest
+      }
+
+      if (this.playerIsMoving || dest_pathFind) {
+        let rotate = moveQuat ? moveQuat.destRotation : null
         if (this.type == 'first') {
           let key_state = this.keyState
           let w = key_state[38] || key_state[87]
@@ -340,12 +390,12 @@ export class ThirdPersonCameraControl {
       let deltaPosition = velocity.clone().multiplyScalar(deltaTime)
       if (dest_pathFind) {
         //注：checkDelta有待优化，碰撞反弹 可能会影响判断
-        let res = this.pathFind?.checkDelta(dest_pathFind.position, deltaPosition, this)
-        if (res.finished) {
+        let res = this.pathFind?.checkDelta(dest_pathFind.position, this)
+        if (res && res.finished) {
+          deltaPosition.x = res.delta.x
+          deltaPosition.z = res.delta.z
           velocity.set(0, velocity.y, 0)
         }
-        deltaPosition.x = res.delta.x
-        deltaPosition.z = res.delta.z
       }
       let updatePos = () => {
         if (this.phycisMgr) {
@@ -395,10 +445,10 @@ export class ThirdPersonCameraControl {
           }
         }
       }
-      // if (!pathFinding)
-      this.checkPlayer()
+      this.checkPlayer(dest_pathFind)
       if (this.callback_joyStickJump) {
       }
+      this.phycisMgr.update(deltaTime, { playerVelocity: velocity })
       updatePos()
     }
   }
@@ -453,11 +503,9 @@ export class ThirdPersonCameraControl {
     return touches
   }
   onMouseDown(event) {
-    console.log('----', 'onMouseDown')
     if (this.enabled === false) return
     if (this.userRotate === false) return
     event.preventDefault()
-
     if (Is.isMobileDevice()) {
       let allTouch = this.allTouches(event)
       if (allTouch.length > 0) {
@@ -489,6 +537,11 @@ export class ThirdPersonCameraControl {
   }
 
   onMouseMove(event) {
+    if (document.pointerLockElement === document.body) {
+      this.camera.rotation.y -= event.movementX / 500
+      this.camera.rotation.x -= event.movementY / 500
+
+    }
     if (this.enabled === false) return
     event.preventDefault()
     let touch = null
@@ -560,7 +613,6 @@ export class ThirdPersonCameraControl {
         } else {
           this.zoomOut()
         }
-        console.error('---', this.zoomDelta)
         this.zoomStart.copy(this.zoomEnd)
       }
     }
@@ -656,7 +708,6 @@ export class ThirdPersonCameraControl {
       // Firefox
       delta = -event.detail
     }
-    // console.error('---','onMouseWheel')
     if (delta > 0) {
       this.zoomOut()
     } else {
@@ -679,10 +730,12 @@ export class ThirdPersonCameraControl {
 
     let key_state = this.keyState
     key_state[event.keyCode || event.which] = false
+    if (event.keyCode == 70 || event.which == 70) {
+      this.shoot()
+    }
     if (this.isKeyDownMoving()) {
       // this.directChanged()
     } else {
-      console.log('---', key_state)
       this.playerIsMoving = false
     }
   }
@@ -749,10 +802,11 @@ export class ThirdPersonCameraControl {
         if (this.type == 'third' && this.player) {
           if (this.player.axisy_z) {
             //有个模型轴有问题
-            this.player.player.rotation.z = dir
+            // this.player.player.rotation.z = dir
           } else {
-            this.player.player.rotation.y = dir
+            // this.player.player.rotation.y = dir
           }
+          this.smoothRotateParam(dir, null)
           if (isDown) {
             this.stopPathFind = true
             this.playerIsMoving = true
@@ -777,12 +831,14 @@ export class ThirdPersonCameraControl {
     if (this.player) {
       if (this.type == 'third') {
         let theta = this.getCameragetWorldDirection()
+        let dir = rad + theta - Math.PI / 2
         if (this.player.axisy_z) {
           //有个模型轴有问题
-          this.player.player.rotation.z = rad + theta - Math.PI / 2
+          // this.player.player.rotation.z = dir
         } else {
-          this.player.player.rotation.y = rad + theta - Math.PI / 2
+          // this.player.player.rotation.y = dir
         }
+        this.smoothRotateParam(dir, null)
         this.stopPathFind = true
         this.playerIsMoving = true
       }
@@ -835,7 +891,6 @@ export class ThirdPersonCameraControl {
     this.domElement.addEventListener('DOMMouseScroll', this.mouseWheel, options) // firefox
     document.body.addEventListener('keydown', this.keyDown, options)
     document.body.addEventListener('keyup', this.keyUp, options)
-    console.log('--keydown--', 'addEventListener')
     this.__addDocEvents()
   }
   removeEvents() {
@@ -851,7 +906,6 @@ export class ThirdPersonCameraControl {
 
     document.body.removeEventListener('keydown', this.keyDown)
     document.body.removeEventListener('keyup', this.keyUp)
-    console.log('--keydown--', 'removeEventListener')
   }
   //////////////////////////////////////
   setObstacles(obj) {
