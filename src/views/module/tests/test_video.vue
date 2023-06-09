@@ -1,12 +1,22 @@
 <script setup name="test_video">
 import Page from '@/components/page'
 import { useRouter } from 'vue-router'
-import { provide, ref, watch, nextTick, onActivated, onDeactivated, onBeforeUnmount } from 'vue'
+import {
+  provide,
+  ref,
+  watch,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onBeforeUnmount,
+  reactive
+} from 'vue'
 import { MultiStreamsMixer } from '@/components/media/MultiStreamsMixer'
 import { RecordRTC } from '@/components/media/RecordRTC'
 import { FileSelector } from '@/components/media/tools/FileSelector'
 import reloadWatch from '@/utils/listener/reload-watch'
 import Is from '@/utils/is'
+import loaderMap from '@/components/threejs/load/loader-map'
 const router = useRouter()
 const params = ref({
   nav: {
@@ -39,6 +49,7 @@ nextTick(function () {
   size.height = mainPageRef.value.$el.clientHeight - 200
   reloadWatch.setListener(() => {
     dispose()
+    startButton.value = 'start'
   })
 })
 const onMouseDown = function (event) {
@@ -67,6 +78,8 @@ const onMouseDown = function (event) {
   }
 }
 const dispose = function () {
+  showVideo.value = false
+  updateMediaHTML('')
   if (Is.isMobileDevice()) {
     document.removeEventListener('touchstart', onMouseDown)
   } else {
@@ -83,15 +96,20 @@ const dispose = function () {
     screenStreamGlobal = null
   }
   if (recorder) {
-    recorder.stopRecording(() => {})
+    recorder.stopRecording(() => {
       recorder.destroy()
-      recorder=null
+      recorder = null
+    })
+    // recorder.destroy()
+    // recorder = null
   }
-  if (audioPreview) {
-    audioPreview.stop()
+  if (audioPreviewRef.value) {
+    audioPreviewRef.value.pause()
+    audioPreviewRefShow.value = false
   }
   if (videoPreview.value && !videoPreview.value.paused && videoPreview.value.srcObject) {
     videoPreview.value.pause()
+    videoPreview.value = false
   }
 }
 const videoPreview = ref()
@@ -103,17 +121,21 @@ let mixer = null
 function updateMediaHTML(html) {
   oupput.value.innerHTML = html
 }
-const mixerOptions = {
-  value: 'camera-screen',
+const mixerOptions = reactive({
+  value: '(pc)camera-screen',
   options: [
-    { text: 'camera-screen' },
-    { text: 'multiple-cameras-default' },
-    { text: 'multiple-cameras-customized' },
-    { text: 'microphone-mp3' }
+    { name: '(pc)camera-screen' },
+    { name: 'multiple-cameras-default' },
+    { name: 'multiple-cameras-customized' },
+    { name: '(pc)microphone-mp3' }
   ]
-}
+})
 function getStream() {
   dispose()
+  if (startButton.value == 'stop') {
+    startButton.value = 'start'
+    return
+  }
   let flag = Is.isMobileDevice()
   if (flag) {
     document.addEventListener('touchstart', onMouseDown, {
@@ -122,30 +144,51 @@ function getStream() {
   } else {
     document.addEventListener('mousedown', onMouseDown, false)
   }
-  setTimeout(() => {
-    getStream2()
-  }, 2000)
+
+  getStream2()
 }
-function getStream2() {
+const delay = function (time) {
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      resolve()
+    }, time)
+  })
+}
+const getStream2 = async function () {
+  audioPreviewRefShow.value = false
   showVideo.value = false
-  if (mixerOptions.value === 'camera-screen') {
+  let idx = 0
+  for (idx = 0; idx < mixerOptions.options.length; idx++) {
+    if (mixerOptions.options[idx].name == mixerOptions.value) {
+      break
+    }
+  }
+  if (idx == 0) {
+    audioPreviewRefShow.value = false
+    showVideo.value = true
     updateMediaHTML('Capturing screen')
     getMixedCameraAndScreen()
+
+    startButton.value = 'stop'
   }
 
-  if (
-    mixerOptions.value === 'multiple-cameras-default' ||
-    mixerOptions.value === 'multiple-cameras-customized'
-  ) {
+  if (idx == 1 || idx == 2) {
+    audioPreviewRefShow.value = false
+    showVideo.value = true
     updateMediaHTML('Capturing camera')
     getMixedMultipleCameras(mixerOptions.value === 'multiple-cameras-customized')
+
+    startButton.value = 'stop'
   }
 
-  if (mixerOptions.value === 'microphone-mp3') {
+  if (idx == 3) {
+    audioPreviewRefShow.value = true
     updateMediaHTML('Capturing mp3+microphone')
+    await delay(500)
     getMixedMicrophoneAndMp3()
+    showVideo.value = false
+    startButton.value = 'stop'
   }
-  showVideo.value = true
 }
 function afterScreenCaptured(screenStream) {
   navigator.mediaDevices.getUserMedia({ video: vopts }).then(function (cameraStream) {
@@ -172,10 +215,12 @@ function afterScreenCaptured(screenStream) {
 
     addStreamStopListener(screenStream, function () {
       mixer.releaseStreams()
-      videoPreview.value.pause()
-      videoPreview.value.src = null
+      if (videoPreview.value) {
+        videoPreview.value.pause()
+        videoPreview.value.src = null
+      }
 
-      cameraStream.getTracks().forEach(function (track) {
+      cameraStream?.getTracks()?.forEach(function (track) {
         track.stop()
       })
     })
@@ -303,14 +348,14 @@ function getMixedMultipleCameras(isCustomized) {
     })
 }
 let recorder = null
-let audioPreview = null
 function getMixedMicrophoneAndMp3() {
   updateMediaHTML('Select Mp3 file.')
   if (recorder) {
     recorder.stopRecording(() => {})
   }
+  let audioPreview = audioPreviewRef.value
   if (audioPreview) {
-    audioPreview.stop()
+    audioPreview.pause()
   }
   getMp3Stream(function (mp3Stream) {
     navigator.mediaDevices
@@ -318,42 +363,55 @@ function getMixedMicrophoneAndMp3() {
         audio: true
       })
       .then(function (microphoneStream) {
-        screenStreamGlobal = microphoneStream
-        mixer = new MultiStreamsMixer([microphoneStream, mp3Stream])
-        // mixer.useGainNode = false;
-        audioPreview = document.createElement('audio')
-        audioPreview.controls = true
-        audioPreview.autoplay = true
-        audioPreview.srcObject = mixer.getMixedStream()
+        try {
+          screenStreamGlobal = microphoneStream
+          mixer = new MultiStreamsMixer([microphoneStream, mp3Stream])
+          // mixer.useGainNode = false;
+          // audioPreview = document.createElement('audio')
 
-        videoPreview.value.replaceWith(audioPreview)
-        videoPreview.value = audioPreview
+          // audioPreview.controls = true
+          // audioPreview.autoplay = true
+          audioPreview.setAttribute('controls', '')
+          audioPreview.setAttribute('autoplay', '')
+          audioPreview.srcObject = mixer.getMixedStream()
 
-        let secondsLeft = 6
-        ;(function looper() {
-          secondsLeft--
+          // videoPreview.value.replaceWith(audioPreview)
+          // videoPreview.value = audioPreview
 
-          if (secondsLeft < 0) {
-            updateMediaHTML('Mixed Microphone+Mp3!')
-            return
-          }
-          updateMediaHTML('Seconds left: ' + secondsLeft)
-          setTimeout(looper, 1000)
-        })()
+          let secondsLeft = 6
+          ;(function looper() {
+            if (recorder) {
+              secondsLeft--
 
-        recorder = RecordRTC(mixer.getMixedStream(), {
-          recorderType: RecordRTC.StereoAudioRecorder
-        })
+              if (secondsLeft < 0) {
+                updateMediaHTML('Mixed Microphone+Mp3!')
+                return
+              }
+              updateMediaHTML('Seconds left: ' + secondsLeft)
+              setTimeout(looper, 1000)
+            }
+          })()
 
-        recorder.startRecording()
-
-        setTimeout(function () {
-          recorder.stopRecording(function () {
-            audioPreview.removeAttribute('srcObject')
-            audioPreview.removeAttribute('src')
-            audioPreview.src = URL.createObjectURL(recorder.getBlob())
+          recorder = RecordRTC(mixer.getMixedStream(), {
+            recorderType: RecordRTC.StereoAudioRecorder
           })
-        }, 5000)
+
+          recorder.startRecording()
+
+          setTimeout(function () {
+            if (recorder) {
+              recorder.stopRecording(function () {
+                audioPreview.removeAttribute('srcObject')
+                audioPreview.removeAttribute('src')
+                audioPreview.src = URL.createObjectURL(recorder.getBlob())
+              })
+            }
+          }, 5000)
+        } catch (e) {
+          console.log(e)
+          dispose()
+          startButton.value = 'start'
+        }
       })
   })
 }
@@ -401,7 +459,10 @@ function addStreamStopListener(stream, callback) {
     'ended',
     function () {
       callback()
-      callback = function () {}
+      callback = function () {
+        console.log('--end--', '111111')
+        startButton.value = 'start'
+      }
     },
     false
   )
@@ -418,7 +479,11 @@ function addStreamStopListener(stream, callback) {
       'ended',
       function () {
         callback()
-        callback = function () {}
+        callback = function () {
+          console.log('ended', '000000')
+          dispose()
+          startButton.value = 'start'
+        }
       },
       false
     )
@@ -556,10 +621,17 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     ctx.stroke()
   }
 }
-const popSelect = (action) => {
-  mixerOptions.value = action.text
-  buttonDisabled.value = false
+const showActionSheet = ref(false)
+const onSelected = (action) => {
+  showActionSheet.value = false
+  mixerOptions.value = action.name
 }
+const changeMixerOption = function () {
+  showActionSheet.value = !showActionSheet.value
+}
+const startButton = ref('start')
+const audioPreviewRef = ref()
+const audioPreviewRefShow = ref(false)
 </script>
 <template>
   <page ref="mainPageRef" class="main-page">
@@ -570,20 +642,16 @@ const popSelect = (action) => {
           type="primary"
           style="margin-right: 10px"
           @click="getStream"
-          >Get Mixed Stream</van-button
+          >{{ startButton }}</van-button
         >
-
-        <van-popover
-          class="pop"
-          style="width: 200px"
-          theme="dark"
+        <van-button type="primary" @click="changeMixerOption">{{ mixerOptions.value }}</van-button>
+        <van-action-sheet
+          v-model:show="showActionSheet"
           :actions="mixerOptions.options"
-          @select="popSelect"
-        >
-          <template #reference>
-            <van-button type="primary">{{ mixerOptions.value }}</van-button>
-          </template>
-        </van-popover>
+          :cancel-text="'取消'"
+          description="切换"
+          @select="onSelected"
+        />
       </div>
       <section class="experiment" style="text-align: center">
         <div id="video-preview">
@@ -598,7 +666,7 @@ const popSelect = (action) => {
             muted="false"
             volume="0"
           ></video>
-          <!--            controls-->
+          <audio v-if="audioPreviewRefShow" ref="audioPreviewRef" controls></audio>
         </div>
       </section>
     </template>

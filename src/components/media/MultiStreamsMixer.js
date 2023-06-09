@@ -290,6 +290,7 @@ const MultiStreamsMixer = function (arrayOfMediaStreams, elementClass) {
     if (ismobileSafari()) {
       if (refresh_el) {
         refresh_el.innerHTML = new Date().getTime()
+        console.log('------', refresh_el.innerHTML)
       }
     }
     setTimeout(drawVideosToCanvas, self.frameInterval)
