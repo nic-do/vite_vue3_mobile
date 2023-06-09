@@ -219,7 +219,8 @@ export class OctreeMgr extends Mgr {
         return
       }
       let sphere = data.item
-      sphere.mesh.position.copy(sphere.collider.center)
+      // sphere.mesh.position.copy(sphere.collider.center)
+      sphere.entity.object3D.position.copy(sphere.collider.center)
     }
   }
   //要求player有一个octree的capsule 对象collider

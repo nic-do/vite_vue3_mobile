@@ -548,15 +548,23 @@ export default {
       //灯光
       // 现在地板有颜色了，还可以添加多个光源，让场景看起来更真实:
       // 半球光光源直接放置于场景之上，光照颜色从天空光线颜色渐变到地面光线颜色。
-      let hemLight = this.addHemisphereLight(0xffffff, 0xffffff, 0.6)
-      hemLight.position.set(0, 48, 0)
+      // let hemLight = this.addHemisphereLight(0xffffff, 0xffffff, 1)
+        let hemLight = this.addHemisphereLight(0xffffff, 0x8d8d8d, 1)
+        hemLight.position.set(0, 30, 0)
       // 先添加个平行光:
       let dirLight = this.addDirectionalLight(0xffffff, 0.6, false, (light) => {
         //光源等位置
-        light.position.set(-10, 8, -5)
+        light.shadow.camera.top = 20
+        light.shadow.camera.bottom = -20
+        light.shadow.camera.left = -25
+        light.shadow.camera.right = 25
+        //   light.angle=Math.PI
+        light.position.set(-20, 20, -15)
+        light.shadow.camera.near = 10
+        light.shadow.camera.far = 100
         //可以产生阴影
         light.castShadow = true
-        light.shadow.mapSize = new this.THREE.Vector2(1024, 1024)
+        // light.shadow.mapSize = new this.THREE.Vector2(1024, 1024)
       })
       return { hemLight: hemLight, dirLight: dirLight }
     },

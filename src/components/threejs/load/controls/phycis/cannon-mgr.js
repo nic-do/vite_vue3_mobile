@@ -1,4 +1,5 @@
 import { Mgr } from '@/components/threejs/load/controls/phycis/mgr'
+import { markRaw } from 'vue'
 export class CannonMgr extends Mgr {
   dispose() {
     this.clear()
@@ -11,26 +12,30 @@ export class CannonMgr extends Mgr {
     this.cannonDebugger = null
     try {
       //这里可能还有listen
-      this.bodys.forEach((item)=>{
-        if (item.shapes){
-          if (item.removeShape!=undefined){
-            for (let i=item.shapes.length-1;i>=0;i--){
-              let shape=item.shapes[i]
+      this.bodys.forEach((item) => {
+        if (item.shapes) {
+          if (item.removeShape != undefined) {
+            for (let i = item.shapes.length - 1; i >= 0; i--) {
+              let shape = item.shapes[i]
               item.removeShape(shape)
-              console.info('-CannonMgr-clear-',shape.myname)
-              shape=null
+              console.info('-CannonMgr-clear-', shape.myname)
+              shape = null
             }
           }
         }
       })
-    }catch (e) {
+    } catch (e) {
       console.error(e)
     }
 
-    this.bodys = []
-    this.colliderBodys = []
+    this.bodys = markRaw([])
+    this.colliderBodys = markRaw([])
     this.playerBody = null
     this.playerBodyH = 0
+    if (this.rayCastResult){
+      this.rayCastResult.abort()
+    }
+    this.rayCastResult = null
   }
 
   constructor(com) {
@@ -38,11 +43,12 @@ export class CannonMgr extends Mgr {
     this.Cannon = null
     this.worldCannon = null
     this.cannonDebugger = null
-    this.bodys = []
-    this.colliderBodys = []
+    this.bodys = markRaw([])
+    this.colliderBodys = markRaw([])
     this.mgrType = 'cannon'
     this.playerBody = null
     this.playerBodyH = 0
+    this.rayCastResult = null
   }
   setCom(com) {
     super.setCom(com)
@@ -97,7 +103,8 @@ export class CannonMgr extends Mgr {
       const position = mesh.geometry.attributes.position
 
       var trackMat = new this.Cannon.Material(name)
-      //mass:0表示固定不动 障碍物， 1表示模拟运动
+      //mass:0表示固定不动 障碍物， >0表示模拟运动
+      //mass: 5 // kg
       const wTrack = new this.Cannon.Body({
         mass: mass != undefined ? mass : 0,
         material: trackMat
@@ -110,7 +117,7 @@ export class CannonMgr extends Mgr {
         vertices[i * 3 + 2] = position.getZ(i) * mesh.scale.z
       }
       let wShape = this.track(new this.Cannon.Trimesh(vertices, indices))
-      wShape.myname='bodyFromMesh-Trimesh-'+name
+      wShape.myname = 'bodyFromMesh-Trimesh-' + name
       wTrack.addShape(wShape)
       wTrack.position.copy(mesh.position)
       wTrack.quaternion.copy(mesh.quaternion)
@@ -142,7 +149,7 @@ export class CannonMgr extends Mgr {
       // mesh-world-body
       world.traverse((obj) => {
         if (obj.isMesh === true) {
-          let res = this.bodyFromMesh(obj, 'ground')
+          let res = this.bodyFromMesh(obj, 'ground',0,10000)
           if (res) this.__addBody(res)
         }
       })
@@ -154,7 +161,7 @@ export class CannonMgr extends Mgr {
       //通过mesh 生mesh-player-body，无法与mesh-world-body 碰撞
       // player.traverse((obj) => {
       //   if (obj.isMesh === true) {
-      //     let res = this.bodyFromMesh(obj, 'player', 1)
+      //     let res = this.bodyFromMesh(obj, 'player', 1,100)
       //     if (res) {
       //       this.playerBody = res
       //       this.__addBody(res)
@@ -165,7 +172,7 @@ export class CannonMgr extends Mgr {
       this.testPlayerBody(player)
     }
   }
-  addNpc(npc){
+  addNpc(npc) {
     super.addNpc(npc)
   }
   showHelper = async function (flag) {
@@ -179,12 +186,32 @@ export class CannonMgr extends Mgr {
       if (this.cannonDebugger) this.cannonDebugger.show = flag
     }
   }
+  __getRayCastResult(){
+    if (!this.rayCastResult){
+      this.rayCastResult = markRaw(new this.Cannon.RaycastResult())
+    }
+    this.rayCastResult.reset()
+    return this.rayCastResult
+  }
+  rayCast(from, to, extra) {
+    let result=this.__getRayCastResult()
+    let flag = this.worldCannon.raycastClosest(from, to, {
+      skipBackfaces:true
+    }, result)
+    if (flag) {
+      return {
+        flag: flag,
+        result: result
+      }
+    }
+    return null
+  }
   ///////////////////////////////////////////////
 
   update(delatime, extra) {
     if (this.worldCannon) {
       this.worldCannon.fixedStep()
-      if (this.cannonDebugger&&this.cannonDebugger.show){
+      if (this.cannonDebugger && this.cannonDebugger.show) {
         this.cannonDebugger.update()
       }
     }
@@ -194,7 +221,7 @@ export class CannonMgr extends Mgr {
       try {
         //切换模型 可能出错
         for (let i = 0; i < this.colliderBodys.length; i++) {
-          if (!this.worldCannon){
+          if (!this.worldCannon) {
             break
           }
           let item = this.colliders[i].item
@@ -204,7 +231,7 @@ export class CannonMgr extends Mgr {
           item.mesh.position.copy(body.position)
           item.mesh.quaternion.copy(body.quaternion)
         }
-      }catch (e){
+      } catch (e) {
         console.error(e)
       }
     }
@@ -213,7 +240,7 @@ export class CannonMgr extends Mgr {
   testGroundBody() {
     // Plane-body
     const groundShape = new this.Cannon.Plane()
-    const groundBody = new this.Cannon.Body({ mass: 0 })
+    const groundBody = new this.Cannon.Body({ mass: 0})
     groundBody.addShape(groundShape)
     groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
     this.__addBody(groundBody)
@@ -224,8 +251,8 @@ export class CannonMgr extends Mgr {
     //const ballShape = new this.Cannon.Box(new this.Cannon.Vec3(0.6, 1, 0.3))
     // Sphere-body可以与mesh-world-body 碰撞
     const ballShape = new this.Cannon.Sphere(0.5)
-    const ballBody = new this.Cannon.Body({ mass: 1 })
-    ballShape.myname='player-test-body'
+    const ballBody = new this.Cannon.Body({ mass: 5 })
+    ballShape.myname = 'player-test-body'
     ballBody.addShape(ballShape)
     this.playerBody = ballBody
     this.playerBodyH = 0.5
@@ -236,7 +263,7 @@ export class CannonMgr extends Mgr {
     //mesh-cube-body
     cube.traverse((obj) => {
       if (obj.isMesh === true) {
-        let res = this.bodyFromMesh(obj, 'obstacle')
+        let res = this.bodyFromMesh(obj, 'obstacle',0,10001)
         if (res) this.__addBody(res)
       }
     })
@@ -247,7 +274,7 @@ export class CannonMgr extends Mgr {
       let sphere = res.sphere
       const ballShape = new this.Cannon.Sphere(0.2)
       // const ballShape = new this.Cannon.Box(new this.Cannon.Vec3(0.2, 0.2, 0.2))
-      const ballBody = new this.Cannon.Body({ mass: 1 })
+      const ballBody = new this.Cannon.Body({ mass: 1})
       ballBody.addShape(ballShape)
       let center = this.player.position
       ballBody.velocity.set(sphere.velocity.x, sphere.velocity.y, sphere.velocity.z)

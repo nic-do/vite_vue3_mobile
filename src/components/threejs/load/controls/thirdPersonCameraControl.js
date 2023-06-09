@@ -47,11 +47,12 @@ export class ThirdPersonCameraControl {
     this.phycisMgr = null
   }
   constructor(com, domElement) {
-    let doc=domElement !== undefined ? domElement : document
+    let doc = domElement !== undefined ? domElement : document
+    let THREE= com.THREE
     this.logTag = new Date().getTime()
     this.phycisMgr = null
     this.com = com
-    this.THREE = com.THREE
+    this.THREE = THREE
     this.camera = markRaw(com.camera)
     this.domElement = markRaw(doc)
     this.type = 'third'
@@ -60,7 +61,7 @@ export class ThirdPersonCameraControl {
     this.enabled = false
 
     this.moveSpeed = 2.5
-    this.jumpHeight = 15
+    this.jumpSpeed = 15
 
     this.userZoomSpeed = 1.0
 
@@ -81,13 +82,13 @@ export class ThirdPersonCameraControl {
     this.EPS = 0.000001
     this.PIXELS_PER_ROUND = 1800
 
-    this.rotateStart = markRaw(new com.THREE.Vector2())
-    this.rotateEnd = markRaw(new com.THREE.Vector2())
-    this.rotateDelta = markRaw(new com.THREE.Vector2())
+    this.rotateStart = markRaw(new THREE.Vector2())
+    this.rotateEnd = markRaw(new THREE.Vector2())
+    this.rotateDelta = markRaw(new THREE.Vector2())
 
-    this.zoomStart = markRaw(new com.THREE.Vector2())
-    this.zoomEnd = markRaw(new com.THREE.Vector2())
-    this.zoomDelta = markRaw(new com.THREE.Vector2())
+    this.zoomStart = markRaw(new THREE.Vector2())
+    this.zoomEnd = markRaw(new THREE.Vector2())
+    this.zoomDelta = markRaw(new THREE.Vector2())
 
     this.phiDelta = 0
     this.thetaDelta = 0
@@ -102,23 +103,27 @@ export class ThirdPersonCameraControl {
 
     this.STEPS_PER_FRAME = 5
     this.GRAVITY = 30
-    this.playerVelocity = markRaw(new com.THREE.Vector3())
+    this.playerVelocity = markRaw(new THREE.Vector3())
     this.playerOnFloor = true
 
     this.callback_joyStickJump = null
-    this.rotateQuat = markRaw(new com.THREE.Quaternion())
-    this.rotateAxis = markRaw(new com.THREE.Vector3(0, 0, 0))
+    this.rotateQuat = markRaw(new THREE.Quaternion())
+    this.rotateAxis = markRaw(new THREE.Vector3(0, 0, 0))
     this.moveQuat = markRaw({
-      useSmooth:true,
-      rotateQuat2: new com.THREE.Quaternion(),
-      rotateAxis2: new com.THREE.Vector3(0, 0, 0),
+      useSmooth: false,//平滑模式，第一、三人称切换 还有点问题
+      //辅助变量
+      rotateQuat2: new THREE.Quaternion(),
+      rotateAxis2: new THREE.Vector3(0, 1, 0),
+      //player 旋转目标角度
+      rotateToQuat: new THREE.Quaternion(),
+      //移动的方向，由终点和起点决定，固定不变
+      destRotation: null,
       pathFind: {
         dest: null,
-        flag: false
       }
     })
 
-    this.tagScale = markRaw(new com.THREE.Vector3(0.01, 0.02, 0.01))
+    this.tagScale = markRaw(new THREE.Vector3(0.01, 0.02, 0.01))
 
     this.keyDown = this.onKeyDown.bind(this)
     this.keyUp = this.onKeyUp.bind(this)
@@ -273,6 +278,34 @@ export class ThirdPersonCameraControl {
           }
           this.player.collider.translate(deltaPosition)
         }
+      } else if (this.phycisMgr.mgrType == 'cannon') {
+        let from = this.player.position.clone()
+        let to = this.player.position.clone()
+        to.setY(-100)
+        let res = this.phycisMgr.rayCast(from, to, null)
+        this.playerOnFloor = false
+        if (res && res.flag) {
+          let result = res.result
+          if (result?.body?.material) {
+            if (result.body.material.name == 'ground') {
+              if (result.distance <= this.player.centerY) {
+                this.playerOnFloor = true
+                const velocity = this.playerVelocity
+                if (!this.playerOnFloor) {
+                  velocity.addScaledVector(
+                    result.hitNormalWorld,
+                    -result.hitNormalWorld.dot(velocity)
+                  )
+                  // const deltaPosition = result.normal.multiplyScalar(result.depth)
+                  // if (this.playerOnFloor && pathFinding) {
+                  //   deltaPosition.x = deltaPosition.z = 0
+                  // }
+                  // this.player.collider.translate(deltaPosition)
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -285,32 +318,38 @@ export class ThirdPersonCameraControl {
         moveQuat.destRotation = destRotation
         return
       } else {
-        if (!moveQuat.useSmooth){
+        if (!moveQuat.useSmooth) {
           //直接旋转，不用平滑
           this.player.player.rotation.y = destRotation
           moveQuat.destRotation = destRotation
-          return;
+          return
         }
-        moveQuat.rotateAxis2.set(0, 1, 0)
       }
       let flag = true
       if (destPosition) {
         // 只有寻路会走此处
+        // pathFind.dest和destPosition做前置判断 是否需要再次计算旋转
+        // （是一个目标点一次旋转到位后，不再旋转，即使因地形问题有偏差也忽略）
         flag = !moveQuat.pathFind.dest || !destPosition.equals(moveQuat.pathFind.dest)
       }
       if (flag) {
+        //永远向这destRotation方向前进
         moveQuat.destRotation = destRotation
+        //自身 移动的终点destPosition
         moveQuat.pathFind.dest = destPosition
-        moveQuat.pathFind.flag = false
+        //自身旋转目标辅助变换
         moveQuat.rotateQuat2.setFromAxisAngle(moveQuat.rotateAxis2, destRotation)
-        moveQuat.rotateToQuat = moveQuat.rotateQuat2.clone()
-      } else if (destPosition && moveQuat.pathFind.flag) {
+        //自身旋转 目标，
+        // moveQuat.rotateToQuat = moveQuat.rotateQuat2.clone()//不用clone，避免new
+        moveQuat.rotateToQuat.copy(moveQuat.rotateQuat2)
+      } else if (destPosition) {
         moveQuat.destRotation = destRotation
         //需要不断校验前进方向
       }
     }
   }
   checkKeyStates(deltaTime) {
+    let isfirst=this.type == 'first'
     if (this.stopPathFind) {
       if (this.pathFind) this.pathFind.clearPath()
       this.stopPathFind = false
@@ -320,51 +359,56 @@ export class ThirdPersonCameraControl {
     if (space) {
       this.keyState[32] = false
       if (this.playerOnFloor) {
-        velocity.y = this.jumpHeight
+        velocity.y = this.jumpSpeed
       }
     }
     let dest_pathFind = null
     if (this.playerOnFloor) {
-      let dest = this.pathFind?.getDest()
-      let rotation = null
-      if (dest) {
-        // dest_pathFind = dest
-        rotation = this.pathFind.rotations(this, this.player.position, dest.position)
-        //注：主要是为了 旋转平滑用
-        this.smoothRotateParam(rotation, dest.position)
-      }
-      let moveQuat = this.moveQuat
-      if (moveQuat.rotateToQuat != undefined) {
-        if (!this.player.player.quaternion.equals(moveQuat.rotateToQuat)) {
+      let rotate=null
+      if (!isfirst){
+        let dest = this.pathFind?.getDest()
+        let rotation = null
+        let moveQuat = this.moveQuat
+        if (dest) {
+          rotation = this.pathFind.rotations(this, this.player.position, dest.position)
+          //注：主要是为了 旋转平滑用
+          this.smoothRotateParam(rotation, dest.position)
+        }
+        if (moveQuat.useSmooth&& !this.player.player.quaternion.equals(moveQuat.rotateToQuat)) {
+          //先旋转完成，然后再 前进
           this.player.player.quaternion.rotateTowards(moveQuat.rotateToQuat, 15 * deltaTime)
         } else if (dest) {
-          moveQuat.pathFind.flag = true
           dest_pathFind = dest
         }
-      } else if (dest) {
-        dest_pathFind = dest
-      }
-
-      if (this.playerIsMoving || dest_pathFind) {
-        let rotate = moveQuat ? moveQuat.destRotation : null
-        if (this.type == 'first') {
-          let key_state = this.keyState
-          let w = key_state[38] || key_state[87]
-          let s = key_state[40] || key_state[83]
-          let a = key_state[37] || key_state[65]
-          let d = key_state[39] || key_state[68]
-          if (w || s || a || d) {
-            if (s) {
-              rotate += Math.PI
-            } else if (a) {
-              rotate += Math.PI / 2
-            } else if (d) {
-              rotate -= Math.PI / 2
-            }
-          } else {
-            rotate = null
-          }
+        if (this.playerIsMoving || dest_pathFind) {
+          rotate = moveQuat ? moveQuat.destRotation : null
         }
+      }else if (this.playerIsMoving || dest_pathFind) {
+        let key_state = this.keyState
+        if (this.player.axisy_z) {
+          //有个模型轴有问题，不能用quaternion去平滑
+          rotate=this.player.player.rotation.z
+        } else {
+          rotate=this.player.player.rotation.y
+        }
+        let w = key_state[38] || key_state[87]
+        let s = key_state[40] || key_state[83]
+        let a = key_state[37] || key_state[65]
+        let d = key_state[39] || key_state[68]
+        if (w || s || a || d) {
+          if (s) {
+            rotate += Math.PI
+          } else if (a) {
+            rotate += Math.PI / 2
+          } else if (d) {
+            rotate -= Math.PI / 2
+          }
+        } else {
+          rotate = null
+        }
+      }
+      if (this.playerIsMoving || dest_pathFind) {
+        //这里的移动是 永远向这destRotation方向前进
         if (rotate != null) {
           let xx = this.moveSpeed * Math.sin(rotate)
           let yy = this.moveSpeed * Math.cos(rotate)
@@ -540,7 +584,6 @@ export class ThirdPersonCameraControl {
     if (document.pointerLockElement === document.body) {
       this.camera.rotation.y -= event.movementX / 500
       this.camera.rotation.x -= event.movementY / 500
-
     }
     if (this.enabled === false) return
     event.preventDefault()
@@ -671,14 +714,16 @@ export class ThirdPersonCameraControl {
     if (this.raycaster) {
       this.camera.updateMatrixWorld()
       this.raycaster.setFromCamera(pt, this.camera)
-      let scene = this.com.scene
-      let navmesh = scene.getObjectByName('navmesh')
-      if (navmesh) {
-        //获取寻路的 目标坐标
-        const nav_res = this.raycaster.intersectObject(navmesh)
-        if (nav_res && nav_res.length > 0) {
-          let dest = nav_res[0].point
-          this.pathFind.test('demo', this.player.position.clone(), dest, this)
+      if (this.type == 'third') {
+        let scene = this.com.scene
+        let navmesh = scene.getObjectByName('navmesh')
+        if (navmesh) {
+          //获取寻路的 目标坐标
+          const nav_res = this.raycaster.intersectObject(navmesh)
+          if (nav_res && nav_res.length > 0) {
+            let dest = nav_res[0].point
+            this.pathFind.test('demo', this.player.position.clone(), dest, this)
+          }
         }
       }
       //获取点击的 物品
@@ -730,7 +775,7 @@ export class ThirdPersonCameraControl {
 
     let key_state = this.keyState
     key_state[event.keyCode || event.which] = false
-    if (event.keyCode == 70 || event.which == 70) {
+    if (event.keyCode == 74 || event.which == 74) {
       this.shoot()
     }
     if (this.isKeyDownMoving()) {

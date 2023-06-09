@@ -8,9 +8,9 @@ export default class ResourceTracker {
     this.source_track.add(resource)
     return resource
   }
-  __track(resource,THREE,myname) {
-    if (!THREE){
-      console.error('ResourceTracker__track','some error')
+  __track(resource, THREE, myname) {
+    if (!THREE) {
+      console.error('ResourceTracker__track', 'some error')
     }
     if (!resource) {
       return resource
@@ -23,13 +23,13 @@ export default class ResourceTracker {
       return resource
     }
 
-    if (resource.dispose&&Is.isFunction(resource.dispose)) {
+    if (resource.dispose && Is.isFunction(resource.dispose)) {
       this.resources.add(resource)
       flag = true
-    }else if (resource.clear&&Is.isFunction(resource.clear)) {
+    } else if (resource.clear && Is.isFunction(resource.clear)) {
       this.resources.add(resource)
       flag = true
-    }else if (resource.destroy&&Is.isFunction(resource.destroy)) {
+    } else if (resource.destroy && Is.isFunction(resource.destroy)) {
       this.resources.add(resource)
       flag = true
     } else if (resource instanceof THREE.Object3D) {
@@ -37,18 +37,22 @@ export default class ResourceTracker {
       flag = true
     }
     if (resource instanceof THREE.Object3D) {
-      this.__track(resource.geometry,THREE,myname)
-      this.__track(resource.material,THREE,myname)
-      this.__track(resource.children,THREE,myname)
+      this.__track(resource.geometry, THREE, myname)
+      this.__track(resource.material, THREE, myname)
+      this.__track(resource.children, THREE, myname)
     } else if (resource instanceof THREE.Material) {
       // We have to check if there are any textures on the material
       for (const value of Object.values(resource)) {
-        if (value instanceof THREE.Object3D||value instanceof THREE.Texture||value instanceof THREE.Material) {
-          this.__track(value,THREE,myname)
+        if (
+          value instanceof THREE.Object3D ||
+          value instanceof THREE.Texture ||
+          value instanceof THREE.Material
+        ) {
+          this.__track(value, THREE, myname)
         } else if (value != undefined && value != null) {
           try {
             if (value.children != undefined && Array.isArray(value.children)) {
-              this.__track(value.children,THREE,myname)
+              this.__track(value.children, THREE, myname)
             }
           } catch (e) {}
         }
@@ -59,7 +63,7 @@ export default class ResourceTracker {
           if (value) {
             const uniformValue = value.value
             if (uniformValue instanceof THREE.Texture || Array.isArray(uniformValue)) {
-              this.__track(uniformValue,THREE,myname)
+              this.__track(uniformValue, THREE, myname)
             }
           }
         }
@@ -69,9 +73,13 @@ export default class ResourceTracker {
         if (value != undefined && value != null) {
           try {
             if (value.children != undefined && Array.isArray(value.children)) {
-              this.__track(value.children,THREE,myname)
-            }else if (value instanceof THREE.Object3D||value instanceof THREE.Texture||value instanceof THREE.Material) {
-              this.__track(value,THREE,myname)
+              this.__track(value.children, THREE, myname)
+            } else if (
+              value instanceof THREE.Object3D ||
+              value instanceof THREE.Texture ||
+              value instanceof THREE.Material
+            ) {
+              this.__track(value, THREE, myname)
             }
           } catch (e) {}
         }
@@ -92,9 +100,9 @@ export default class ResourceTracker {
   dispose(THREE) {
     // for (let i = 0; i < this.source_track.length; i++) { let obj = this.source_track[i]
     for (const obj of this.source_track) {
-      this.__track(obj,THREE,obj.myname)
+      this.__track(obj, THREE, obj.myname)
     }
-    this.source_track = []
+    this.source_track.clear()
     let op = null
     console.log('--res-dispose-count--', this.resources.size)
     for (const resource of this.resources) {
@@ -105,22 +113,22 @@ export default class ResourceTracker {
         }
       }
       op = null
-      if (resource.dispose&&Is.isFunction(resource.dispose)) {
+      if (resource.dispose && Is.isFunction(resource.dispose)) {
         op = ' dispose'
         resource.dispose()
       }
-      if (resource.clear&&Is.isFunction(resource.clear)) {
+      if (resource.clear && Is.isFunction(resource.clear)) {
         op = ' clear'
         resource.clear()
       }
-      if (resource.destroy&&Is.isFunction(resource.destroy)) {
+      if (resource.destroy && Is.isFunction(resource.destroy)) {
         op = ' destroy'
         resource.destroy()
       }
-      if (!resource.type){
-        console.info('track-resources',resource)
+      if (!resource.type) {
+        console.info('track-resources', resource)
       }
-      console.info('track-resources','dispose--'+resource.type+'|--myname:' + resource.myname)
+      console.info('track-resources', 'dispose--' + resource.type + '|--myname:' + resource.myname)
       // if (resource.myname) {
       //   console.error(
       //     'res-dispose-op',
@@ -150,12 +158,13 @@ export default class ResourceTracker {
       }
       render.forceContextLoss()
       render.dispose()
-
-      let gl = render.domElement.getContext('webgl')
-      gl && gl.getExtension('WEBGL_lose_context').loseContext()
-      let node = render.domElement.parentNode
-      if (node) {
-        node.removeChild(render.domElement)
+      if (render.domElement){
+        let gl = render.domElement.getContext('webgl')
+        gl && gl.getExtension('WEBGL_lose_context').loseContext()
+        let node = render.domElement.parentNode
+        if (node) {
+          node.removeChild(render.domElement)
+        }
       }
       render.context = null
       render.domElement = null

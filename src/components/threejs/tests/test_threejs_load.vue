@@ -27,6 +27,7 @@ import PlayerMake from '@/components/threejs/tests/player-make'
 import ModuleLoad from '@/components/threejs/tests/module-load'
 import AudioMake from '@/components/threejs/tests/audio-make'
 import WorldLoad from '@/components/threejs/tests/world-load'
+import SpotLight from '@/components/threejs/tests/spot-light'
 const props = defineProps(['relationKey'])
 
 ////////////////////////////////////
@@ -78,7 +79,9 @@ onDeactivated(() => {
 onBeforeUnmount(() => {
   releaseAll()
 })
+let releaseAllFlag = null
 const releaseAll = function () {
+    releaseAllFlag=true
   if (modelAnimate) {
     if (modelAnimate.dispose != undefined) {
       modelAnimate.dispose()
@@ -100,6 +103,10 @@ const releaseAll = function () {
   previousAction = null
   activeAction = null
   api = null
+  if (lightAnimateId) {
+    clearTimeout(lightAnimateId)
+  }
+  lightAnimateId = null
   // groundPlane = null
   // cameraTarget = null
 }
@@ -155,6 +162,7 @@ const playAudio = function () {
       cameraAudio = AudioMake.mmdAudio(com, positionMmdMusicMode, (data) => {
         makePlayer(com, data.mesh, data.params, (player) => {
           com.lodLevel(player, 2)
+          player.name = 'mmd-player'
           com.scene.add(player)
 
           mmdAniHelper = data.helper
@@ -183,7 +191,7 @@ const playPositionAudio = function () {
 }
 const setCamera = function (camera, THREE) {}
 const setLight = function (light, THREE) {
-  // let com = threejsLoadRef.value
+  let com = threejsLoadRef.value
   // let mode = module.data.mode
   // if (mode == 'stl' || mode == 'ply') {
   //   //   light.hemLight = com.addHemisphereLight(0x8d7c7c, 0x494966)
@@ -201,6 +209,8 @@ const setLight = function (light, THREE) {
   //     if (mode == 'collada') light.position.set(1, 5, 0) //.normalize()
   //   })
   // }
+  //   light.dirLight=null
+  //   light.hemLight = com.addHemisphereLight(0xffffff, 0x8d8d8d, 0.05)
 }
 // let groundPlane = null
 const setGround = function (ground, THREE) {
@@ -229,11 +239,35 @@ const setRender = async function (render, THREE) {
   controls = ctrls
   return render
 }
+let spotLight = null
 const setAnimate = async function (delta, camera, scene, THREE) {
   //阻塞
-  if (mmdAniHelper && mmdAudioFlag) mmdAniHelper.update(delta)
+  if (mmdAniHelper && mmdAudioFlag) {
+    mmdAniHelper.update(delta)
+    if (!spotLight) {
+      let com = threejsLoadRef.value
+      let obj = scene.getObjectByName('mmd-player')
+      spotLight = SpotLight.addSpotLight(com, obj.position)
+      spotLight.light.target = obj
+      scene.add(spotLight.light)
+      scene.add(spotLight.helper)
+      lightAnimate()
+    }
+    if (lightAnimateId){
+        SpotLight.tweenUpdate()
+    }
+  }
 }
-
+let lightAnimateId = null
+const lightAnimate = function () {
+  if (spotLight&&!releaseAllFlag) {
+    SpotLight.tweenLight(spotLight.light, spotLight.helper)
+    if (lightAnimateId) {
+      clearTimeout(lightAnimateId)
+    }
+    lightAnimateId = setTimeout(lightAnimate, 5000)
+  }
+}
 let modelAnimate = null
 const setLoadModule2 = function (scene, THREE) {
   return setLoadModule(scene, THREE)

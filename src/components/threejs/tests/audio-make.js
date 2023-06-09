@@ -19,6 +19,7 @@ const positionAudio = function (com, el, callback) {
         if (object.isMesh) {
           object.geometry.rotateY(-Math.PI)
           object.castShadow = true
+          object.receiveShadow = true
         }
       })
       boomBox.myname = 'BoomBox'
@@ -63,6 +64,8 @@ const testmmdAudio = async function (com, audio, positionMode, callback) {
                 })
                 const addToControl = () => {
                   //缩放
+                  mesh.castShadow = true
+                  mesh.receiveShadow = true
                   mesh.scale.set(0.1, 0.1, 0.1)
                   //调整初始位置
                   let tag = {
