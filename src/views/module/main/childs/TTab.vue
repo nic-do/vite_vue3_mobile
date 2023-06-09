@@ -266,7 +266,7 @@ export default {
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)
         if (top != undefined) {
           this.$el.scrollTop = top
-          console.log('mounted', this.$el.scrollTop)
+          // console.log('mounted', this.$el.scrollTop)
         }
       })
     },
@@ -277,7 +277,7 @@ export default {
     },
     setScrollCache() {
       this.parent.setScrollTop(this.$options.name, this.$el.scrollTop)
-      console.log('beforeUnmount', this.$el.scrollTop)
+      // console.log('beforeUnmount', this.$el.scrollTop)
     }
   }
 }
