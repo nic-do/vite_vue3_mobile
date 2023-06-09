@@ -34,7 +34,12 @@ export default defineConfig(({ command, mode }) => ({
   plugins: [
     vue({
       template: {
-        img: ['src', 'temp'] //img temp属性 Lazyload-filer的progressive有关
+        img: ['src', 'temp'], //img temp属性 Lazyload-filer的progressive有关
+        compilerOptions: {
+          //这里是配置 aframe的
+          // 将所有带短横线的标签名都视为自定义元素
+          isCustomElement: (tag) =>tag.startsWith('a-')// tag.includes('a-')
+        }
       }
     }),
     vueJsx(),

@@ -20,6 +20,7 @@ if (import.meta.env.DEV) {
 }
 ///////////////////////////////////////
 import { keepAliveStore } from '@/stores/keepalive'
+
 async function config(app) {
   app.config.unwrapInjectedRef = true
   // 1. 错误异常处理
@@ -30,7 +31,7 @@ async function config(app) {
     console.warn(err, vm, info)
   }
   //自定义全局变量----begin----
-  app.config.globalProperties.$useSvgLoad=true
+  app.config.globalProperties.$useSvgLoad = true
   // if (import.meta.env.DEV) {
   //     app.config.globalProperties.$mockTest = mockTest
   // }
@@ -67,10 +68,15 @@ async function config(app) {
       keepAliveStore().removeAllAfter(this.$route.name)
     },
     beforeUnmount() {},
-    deactivated() {
-    }
+    deactivated() {}
   })
 
+  //如果aframe a-标签报错，添加以下代码
+  // 将所有标签前缀为 `a-` 的标签视为自定义元素 a-frame用到
+  // 如果无效，将此配置写到vite.conifig里
+  //   app.config.compilerOptions.isCustomElement = (tag) => {
+  //     return tag.startsWith('a-')
+  //   }
   app.mount('#app')
 }
 export default { config }
