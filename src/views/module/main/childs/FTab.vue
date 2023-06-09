@@ -175,11 +175,11 @@ export default {
             url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
         })
       this.gridItems.push({
-        title: 'testthree',
+        title: 'threejs',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
         this.gridItems.push({
-            title: 'testAframe',
+            title: 'aframe',
             url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
         })
 
@@ -260,12 +260,11 @@ export default {
           }
       }else if(val.title=='webrtc'){
           name='test_video'
-      }else if (val.title == 'testthree') {
+      }else if (val.title == 'threejs') {
          name='test_threejs_load'
           // name='testthree'
-      }else if (val.title == 'testAframe') {
-          // name='test_threejs_load'
-          name='testthree'
+      }else if (val.title == 'aframe') {
+          name='test_aframe'
       }
 
       if (name) {
