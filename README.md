@@ -1,4 +1,4 @@
-实现的基本骨架功能，不涉及业务
+实现的基本骨架功能及demo，不涉及业务
 
 1、多首页              完成 见多入口说明
 
@@ -22,6 +22,8 @@
 
 11、添加threejs       基本完成 octree例子。cannon-es例子开发中。支持页面中按需动态引入ammo、cannon-es
                      实现了基本的第一/三人称控制器和joystick。
+                     
+12、添加AFrame        实现简单第一人称demo
 
 内置了mock配合axios模拟接口调用  dev和preview模式都可以使用
 
