@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "^8.0.0",
+    "aframe": "^1.4.2",
     "axios": "^1.4.0",
     "can-i-ignore-scripts": "^0.1.9",
     "cannon-es-debugger": "^1.0.0",
