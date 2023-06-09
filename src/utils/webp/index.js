@@ -24,7 +24,7 @@ const getAssetsFile = (url) => {
   }
   return path
 }
-const getPbulicFile = (url) => {
+const getPublicFile = (url) => {
   let path = url
   if (import.meta.env.PROD && isSupportWebp() && webpTest.test(url)) {
     let idx = path.lastIndexOf('.')
@@ -34,4 +34,4 @@ const getPbulicFile = (url) => {
   }
   return path
 }
-export { getAssetsFile,getPbulicFile }
+export { getAssetsFile,getPublicFile }

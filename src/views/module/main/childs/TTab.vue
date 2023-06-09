@@ -196,7 +196,7 @@
           <div>public图片</div>
           <div
                   style="width: 380px; height: 380px; background-repeat: no-repeat"
-                  :style="{ 'background-image': 'url('+getPbulicFile('b1.JPG')+')' }"
+                  :style="{ 'background-image': 'url('+getPublicFile('b1.JPG')+')' }"
           />
 
         <van-divider>webp背景---begin</van-divider>
@@ -211,7 +211,7 @@ import { nextTick } from 'vue'
 import VNumber from '@/components/v-number'
 import VUploader from '@/components/v-uploader/v-uploader.vue'
 import imgpath from '@/assets/png/555.webp'
-import { getAssetsFile ,getPbulicFile} from '@/utils/webp'
+import { getAssetsFile ,getPublicFile} from '@/utils/webp'
 export default {
   name: 'TTab',
   computed: {},
@@ -260,7 +260,7 @@ export default {
   },
   methods: {
     getAssetsFile,
-      getPbulicFile,
+      getPublicFile,
     init() {
       nextTick(() => {
         let top = this.parent.getScrollTop(this.$options.name, this.$el.scrollTop)
