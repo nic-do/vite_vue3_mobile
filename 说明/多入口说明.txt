@@ -21,3 +21,5 @@
 新增入口1：http://localhost:5173/secproject/#/
 新增入口2：http://localhost:5173/trdproject/#/
 
+引用public下的图片，需要重定向，或者在public建一个secproject/trdproject存放一份copy文件
+
