@@ -10,7 +10,7 @@ function truncate(q) {
 function getSign(q, type) {
   if (type == 'baidu') {
     let appid = '' //
-    let secretkey = ''//注意：暴露appSecret，有被盗用造成损失的风险
+    let secretkey = '' //注意：暴露appSecret，有被盗用造成损失的风险
     let salt = new Date().getTime()
     let sign = MD5(appid + q + salt + secretkey)
     return {
@@ -42,6 +42,9 @@ function youdaoFanyi(data) {
   let from = 'auto'
   let vocabId = '' //您的用户词表ID
   let res = getSign(q, 'youdao')
+  if (!res.appid) {
+    return { error: '需要先配置appid和key' }
+  }
   return Jsonp(
     {
       q: q,
@@ -62,6 +65,9 @@ function baiduFanyi(data) {
   let to = data.to
   let from = 'auto'
   let res = getSign(q, 'baidu')
+  if (!res.appid) {
+    return { error: '需要先配置appid和key' }
+  }
   let appid = res.appid
   let salt = res.salt
   let sign = res.sign

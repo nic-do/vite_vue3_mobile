@@ -21,7 +21,7 @@ function setLanguage(lang) {
   document.querySelector('html').setAttribute('lang', lang)
 }
 
-let lanCache={}
+let lanCache = {}
 async function useLocale(locale) {
   if (locale != null) {
     // 注：import()参数 假如带有 @ 这种别名路径的，如果加载不成功，
@@ -47,17 +47,17 @@ async function useLocale(locale) {
         vmessage = Locale.messages()
       }
       let message = await import(`@/i18n/messages/${locale}.js`).catch((err) => {})
-      if (vmessage&&!message){
-        let ds=await getMessageFromBaidu(vmessage.telInvalid)
-        if (ds){
+      if (vmessage && !message) {
+        let ds = await getMessageFromWeb(vmessage.telInvalid)
+        if (ds) {
           message = { default: ds }
         }
       }
 
       if (!message) {
         message = { default: {} }
-      }else{
-        Object.assign(lanCache,message.default)
+      } else {
+        Object.assign(lanCache, message.default)
       }
       //合并语言包
       //此处assign后，重复的语言配置 以vant的为准；若要以自定义为准，替换一下前后位置
@@ -77,64 +77,67 @@ async function useLocale(locale) {
   }
 }
 let values = []
-const enumMsg=async function (obj) {
+const enumMsg = async function (obj) {
   for (const key in obj) {
     if (Is.isObject(obj[key])) {
       await enumMsg(obj[key])
-    } else if (Is.isString(obj[key])){
-      if (values.indexOf(obj[key])<0)
-        values.push(obj[key])
+    } else if (Is.isString(obj[key])) {
+      if (values.indexOf(obj[key]) < 0) values.push(obj[key])
     }
   }
 }
-const replaceMSg=function (dst,src){
-  if (dst&&src){
-    for (let i=0;i<src.length;i++){
-      dst=dst.replaceAll("\""+src[i].src+"\"","\""+src[i].dst+"\"")
+const replaceMSg = function (dst, src) {
+  if (dst && src) {
+    for (let i = 0; i < src.length; i++) {
+      dst = dst.replaceAll('"' + src[i].src + '"', '"' + src[i].dst + '"')
     }
   }
   return JSON.parse(dst)
 }
-const getMessageFromBaidu=async function (text){
-  if (text){
-    let translateType='youdao'
-    let translateJs='translate'
+const getMessageFromWeb = async function (text) {
+  if (text) {
+    let translateType = 'youdao'
+    let translateJs = 'translate'
     let translateData = await import(`@/request/${translateJs}.js`).catch((err) => {
       if (err) {
         console.log('--iq8n-import--vant-', err)
       }
     })
-    let translate=translateData.translate
-    let res=await translate({q:text,to:'zh'},translateType)
-    let from=res.from
-    if (res.l){
-      from=res.l.split('2')[0]
+    let translate = translateData.translate
+    let res = await translate({ q: text, to: 'zh' }, translateType)
+    if (res.error) {
+      alert(res.error)
+      return
+    }
+    let from = res.from
+    if (res.l) {
+      from = res.l.split('2')[0]
       //有道翻译
     }
-    if (res&&from){
-      let nmsg={...lanCache}
-      console.log('--translate-nmsg--',nmsg)
-      values=[]
+    if (res && from) {
+      let nmsg = { ...lanCache }
+      console.log('--translate-nmsg--', nmsg)
+      values = []
       await enumMsg(nmsg)
-      if (values.length>0){
-        let q= values.join('\n')
-        res=await translate({q:q,to:from},translateType)
-        if (res){
-          let toChange=JSON.stringify(nmsg)
-          console.log('--translate-back--',res)
-          let trans_result=res.trans_result
-          if (res.l){
-            let query=res.query.split('\n')
-            let ds=res.translation[0].split('\n')
-            trans_result=[]
-            for (let i=0;i<query.length;i++){
+      if (values.length > 0) {
+        let q = values.join('\n')
+        res = await translate({ q: q, to: from }, translateType)
+        if (res) {
+          let toChange = JSON.stringify(nmsg)
+          console.log('--translate-back--', res)
+          let trans_result = res.trans_result
+          if (res.l) {
+            let query = res.query.split('\n')
+            let ds = res.translation[0].split('\n')
+            trans_result = []
+            for (let i = 0; i < query.length; i++) {
               trans_result.push({
-                src:query[i],
-                dst:ds[i]
+                src: query[i],
+                dst: ds[i]
               })
             }
           }
-          return replaceMSg(toChange,trans_result)
+          return replaceMSg(toChange, trans_result)
         }
       }
     }
