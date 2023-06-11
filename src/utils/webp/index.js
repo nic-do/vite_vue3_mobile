@@ -1,3 +1,5 @@
+import {fixeUrl} from "@/utils/wujie/wujie-url";
+
 const webpTest = /\.(jpe?g|png)/i
 let flag_isSupportWebp = null
 const isSupportWebp = function () {
@@ -13,25 +15,30 @@ const isSupportWebp = function () {
     return false
   }
 }
+const needWebp=function (url){
+  return import.meta.env.PROD && isSupportWebp() && webpTest.test(url)
+}
 const getAssetsFile = (url) => {
-  //注：不能修改url （非常重要） 另外：url可以是 'login/test1.png'
+  //注：不能修改${url} （非常重要） 另外：url可以是 'login/test1.png'
   let path = new URL(`../../assets/img/${url}`, import.meta.url).href
-  if (import.meta.env.PROD && isSupportWebp() && webpTest.test(url)) {
+  if (needWebp()) {
     let idx = path.lastIndexOf('.')
     if (idx > 0) {
       path = path.substring(0, idx) + '.webp'
     }
   }
+  path=fixeUrl(path)
   return path
 }
 const getPublicFile = (url) => {
   let path = url
-  if (import.meta.env.PROD && isSupportWebp() && webpTest.test(url)) {
+  if (needWebp()) {
     let idx = path.lastIndexOf('.')
     if (idx > 0) {
       path = path.substring(0, idx) + '.webp'
     }
   }
+  path=fixeUrl(path)
   return path
 }
-export { getAssetsFile,getPublicFile }
+export { getAssetsFile, getPublicFile }
