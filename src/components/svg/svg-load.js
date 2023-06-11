@@ -1,3 +1,4 @@
+import {fixeUrl} from "@/utils/wujie/wujie-url";
 
 function loadSvgCode(code, name) {
   let symbolId = `icon-${name}`
@@ -83,6 +84,7 @@ import service from '@/utils/axios/service'
 async function loadsvg_axios(name) {
   //注：不能修改name （非常重要） 外部要补全后缀 .svg
   let path = new URL(`../../assets/svg/${name}`, import.meta.url).href
+  path=fixeUrl(path)
   let svgFile = await service({ url: path, method: 'GET', responseType: 'blob' }).catch((err) => {})
   let text = null
   if (svgFile) {

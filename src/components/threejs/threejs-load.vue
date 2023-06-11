@@ -150,7 +150,7 @@ export default {
         checkRequestAnimationFrame()
 
         nextTick(async () => {
-          await this.getLoad(this.module.mode)
+          await this.getLoad()
           this.skyBox = markRaw(new SkyBox(this))
           this.lod = this.track(new this.THREE.LOD())
           this.initScene()
@@ -178,6 +178,7 @@ export default {
     },
     async getLoader(mode) {
       //按文件格式 加载 需要的loader
+      mode=  mode.toLowerCase()
       if (this.loaders[mode] == null) {
         let res = await LoadHelper.getLoader(mode)
         if (res) this.loaders[mode] = res
@@ -549,8 +550,8 @@ export default {
       // 现在地板有颜色了，还可以添加多个光源，让场景看起来更真实:
       // 半球光光源直接放置于场景之上，光照颜色从天空光线颜色渐变到地面光线颜色。
       // let hemLight = this.addHemisphereLight(0xffffff, 0xffffff, 1)
-        let hemLight = this.addHemisphereLight(0xffffff, 0x8d8d8d, 1)
-        hemLight.position.set(0, 30, 0)
+      let hemLight = this.addHemisphereLight(0xffffff, 0x8d8d8d, 1)
+      hemLight.position.set(0, 30, 0)
       // 先添加个平行光:
       let dirLight = this.addDirectionalLight(0xffffff, 0.6, false, (light) => {
         //光源等位置

@@ -13,11 +13,11 @@ const getLoader = async (com,file, materials) => {
     let mLoader = null
     if (com) {
         let suffix = file.split('.')[1]
-        let loaderMode = loaderMap[suffix]
-        if (!loaderMode) {
-            loaderMode = suffix
-        }
-        mLoader = await com.getLoader(loaderMode)
+        let loaderMode = loaderMap[suffix.toLowerCase()]
+        // if (!loaderMode) {
+        //     loaderMode = suffix
+        // }
+        mLoader = await com.getLoader(loaderMode||suffix)
         if (!mLoader) {
             return null
         }
@@ -36,6 +36,8 @@ const doLoad = async function (com,mLoader, file) {
             (obj) => {
                 if (obj) {
                     com.track(obj)
+                }else{
+                    console.error('load-err',file)
                 }
                 resolve(obj)
             },
@@ -52,7 +54,7 @@ const loadModule = async (com,file, materials, resolve, resolveall) => {
             if (!mLoader) {
                 if (resolve) resolve(null, file)
             } else {
-                let obj = await doLoad(com,mLoader, item).catch((e) => {})
+                let obj = await doLoad(com,mLoader, item).catch((e) => {console.error('---',e)})
                 if (resolveall) {
                     allItems.push({ file: item, obj: obj })
                 }

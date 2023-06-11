@@ -128,9 +128,10 @@ nextTick(() => {
 const onSelected = (action) => {
   showActionSheet.value = false
   if (action.path != module.data.file) {
+    let mode=  loaderMap[action.name]
     let dd = {
       file: action.path || action.paths,
-      mode: loaderMap[action.name],
+      mode: mode||action.name,
       name: action.name
     }
     module.data = dd

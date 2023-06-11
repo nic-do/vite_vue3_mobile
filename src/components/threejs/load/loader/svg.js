@@ -1,3 +1,2 @@
-import {SVGLoader} from 'three/addons/loaders/SVGLoader'
-
+import { SVGLoader } from 'three/addons/loaders/SVGLoader'
 export default SVGLoader
