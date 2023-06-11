@@ -71,7 +71,7 @@ const fromDics = function (val, keys) {
         }
       }
       if (!duplicate && route.component !== undefined) {
-        console.log('--route-dics--', key)
+        //console.log('--route-dics--', key)
         allroutes.push(route)
       }
     }

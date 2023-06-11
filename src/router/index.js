@@ -15,12 +15,12 @@ let push = router.push
 let isForward_replace = null
 let isForward = null
 let isBack = null
-router.push =async function (to) {
+router.push = async function (to) {
   isForward = true
   push.call(this, to)
   return true
 }
-router.replace =async function (to) {
+router.replace = async function (to) {
   isForward = true
   isForward_replace = true
   replace.call(this, to)
@@ -38,7 +38,7 @@ router.go = async function (num) {
 }
 let goBackResult = null
 //刷新后 跳转可能 会不正确，因为history的记录和 keepalive数组会不一致，可能导致go(num) 返回的目标不正确
-router.goBack =async function (name, param) {
+router.goBack = async function (name, param) {
   let dxToGo = name
   if (!Number.isInteger(name)) {
     let toidx = keepAliveStore().data.indexOf(name)
@@ -76,24 +76,24 @@ function clearState() {
   goBackResult = null
 }
 function clearGoBackResult(to) {
-  delete to.params['goBackResult']
-  delete history.state['goBackResult']
+  if (to) delete to.params['goBackResult']
+  if (history.state) delete history.state['goBackResult']
 }
 ////////////////////////动态加载route----begin//////
 //单个route 按需动态加载，路由处理很麻烦，已放弃；
 // 这里，刷新页面时整体加载一次，简单一些
 import routeAsync from './route-dynamic'
-router.addDynamicRoute =  function () {
-  if (routeAsync){
-    let routes= routeAsync.getRoutes()
-    for (let i=0;i<routes.length;i++){
-      let route=routes[i]
-      if (!router.hasRoute(route.name)){
+router.addDynamicRoute = function () {
+  if (routeAsync) {
+    let routes = routeAsync.getRoutes()
+    for (let i = 0; i < routes.length; i++) {
+      let route = routes[i]
+      if (!router.hasRoute(route.name)) {
         try {
           router.addRoute(route)
-        }catch (e){
-          let routes=router.getRoutes();
-          console.error('--addDynamicRoute--',e)
+        } catch (e) {
+          let routes = router.getRoutes()
+          console.error('--addDynamicRoute--', e)
         }
       }
     }

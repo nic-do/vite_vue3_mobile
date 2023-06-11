@@ -21,7 +21,7 @@ if (import.meta.env.DEV) {
 ///////////////////////////////////////
 import { keepAliveStore } from '@/stores/keepalive'
 
-async function config(app) {
+async function config(app,callback) {
   app.config.unwrapInjectedRef = true
   // 1. 错误异常处理
   app.config.errorHandler = (err, vm, info) => {
@@ -77,6 +77,9 @@ async function config(app) {
   //   app.config.compilerOptions.isCustomElement = (tag) => {
   //     return tag.startsWith('a-')
   //   }
+  if (callback){
+    callback({router:router})
+  }
   app.mount('#app')
 }
 export default { config }
