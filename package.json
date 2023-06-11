@@ -65,7 +65,10 @@
     "vue2-animate": "^2.1.4",
     "vue3-particles": "^2.9.3",
     "vue3-sfc-transitions": "^1.0.4",
-    "vue3-virtual-scroll": "^0.1.10"
+    "vue3-virtual-scroll": "^0.1.10",
+    "webrtc-adapter": "^8.2.2",
+    "wujie": "^1.0.17",
+    "wujie-vue3": "^1.0.17"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.2.0",
