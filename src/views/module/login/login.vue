@@ -21,6 +21,7 @@ import { userInfoStore } from '@/stores/userinfo'
 
 import routeDics from '@/router/route-dynamic-login'
 import { routeStore } from '@/stores/route-store'
+import bus from '@/utils/wujie/event-bus'
 // import { login } from '@/request/user.js'
 const { proxy } = getCurrentInstance() //用来获取全局变量用；proxy
 const router = useRouter()
@@ -234,45 +235,53 @@ const form = reactive({
 let userWeb = null
 let submitting = false
 const onSubmit = async function (values) {
-  if (!submitting) {
-    submitting = true
-    let userJs = 'user'
-    if (!userWeb) {
-      //如果 页面可以 在route中异步 加载，此处就没必要异步
-      // 首次加载，比全局引入减少20k上下的
-      // import {login} from '@/request/user'
-      let userData = await import(`../../../request/${userJs}.js`).catch((err) => {
-        if (err) {
-          console.log(`-import--${userJs}-`, err)
-        }
-      })
-      userWeb = userData.default
-    }
-    if (userWeb) {
-      let res = await userWeb.login({ username: form.name, password: form.pwd }).catch((err) => {
-        console.log('--login--', err)
-      })
-      if (res && res.code == 200) {
-        userInfoStore().setData(res.data)
-        ////////添加--由登录返回参数控制的路由////////
-        //如果要 对多首页 进行不同的配置，需要自行修改一下缓存及读取的逻辑
-        let routekey = []
-        for (let key in routeDics) {
-          //这里是添加里全部，可以自定义过滤规则
-          routekey.push(key)
-        }
-        //缓存到session，避免页面刷新丢失
-        routeStore().addData(routekey)
-        //刷新路由，这一步必须
-        router.addDynamicRoute()
-        ///////////////////////////////////////
-        router.replace({
-          name: 'main'
-        })
-      }
-    }
-    submitting = false
+  if (window.__POWERED_BY_WUJIE__) {
+    if (window.$wujie.bus.id == 'trdproject')
+      bus.emit('to-main', { type: 'login', msg: 'trdproject 登录了' })
   }
+  goMain()
+  // if (!submitting) {
+  //   submitting = true
+  //   let userJs = 'user'
+  //   if (!userWeb) {
+  //     //如果 页面可以 在route中异步 加载，此处就没必要异步
+  //     // 首次加载，比全局引入减少20k上下的
+  //     // import {login} from '@/request/user'
+  //     let userData = await import(`../../../request/${userJs}.js`).catch((err) => {
+  //       if (err) {
+  //         console.log(`-import--${userJs}-`, err)
+  //       }
+  //     })
+  //     userWeb = userData.default
+  //   }
+  //   if (userWeb) {
+  //     let res = await userWeb.login({ username: form.name, password: form.pwd }).catch((err) => {
+  //       console.log('--login--', err)
+  //     })
+  //     if (res && res.code == 200) {
+  //       userInfoStore().setData(res.data)
+  //       goMain()
+  //     }
+  //   }
+  //   submitting = false
+  // }
+}
+const goMain = function () {
+  ////////添加--由登录返回参数控制的路由////////
+  //如果要 对多首页 进行不同的配置，需要自行修改一下缓存及读取的逻辑
+  let routekey = []
+  for (let key in routeDics) {
+    //这里是添加里全部，可以自定义过滤规则
+    routekey.push(key)
+  }
+  //缓存到session，避免页面刷新丢失
+  routeStore().addData(routekey)
+  //刷新路由，这一步必须
+  router.addDynamicRoute()
+  ///////////////////////////////////////
+  router.replace({
+    name: 'main'
+  })
 }
 //表单 相关----end----
 

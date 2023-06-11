@@ -72,7 +72,7 @@
 </template>
 
 <script>
-import { nextTick } from 'vue'
+import { getCurrentInstance, nextTick } from 'vue'
 import { useParent } from '@vant/use'
 import Api from '@/utils/axios/api'
 import Is from '@/utils/is'
@@ -91,8 +91,10 @@ export default {
   props: ['relationKey'],
   setup(props, context) {
     const { parent } = useParent(props.relationKey)
+    const { proxy } = getCurrentInstance()
     return {
-      parent
+      parent,
+      proxy
     }
   },
   data() {
@@ -170,18 +172,32 @@ export default {
         title: '页面切换数据交互',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
-        this.gridItems.push({
-            title: 'webrtc',
-            url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
-        })
+      this.gridItems.push({
+        title: 'webrtc',
+        url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+      })
       this.gridItems.push({
         title: 'threejs',
         url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
       })
-        this.gridItems.push({
-            title: 'aframe',
-            url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
-        })
+      this.gridItems.push({
+        title: 'test-threejs-edit',
+        url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+      })
+      this.gridItems.push({
+        title: 'aframe',
+        url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+      })
+      if (this.proxy.$wj_main||this.proxy.$pj_name=='trdproject') {
+          if (this.proxy.$pj_name!='secproject'){
+              // console.log('--000--',window.$wujie?.bus?.id)
+              this.gridItems.push({
+                  title: 'wujie',
+                  url: 'https://fastly.jsdelivr.net/npm/@vant/assets/ipad.jpeg'
+              })
+          }
+
+      }
 
       // for (var i = 0; i < 3; i++) {
       //   this.gridItems.push({
@@ -240,7 +256,7 @@ export default {
     },
     clickGrid(val) {
       let name = null
-        let data=null
+      let data = null
       if (val.title == 'van-li') {
         name = 'list_van'
       } else if (val.title == 'scroller-li') {
@@ -255,22 +271,38 @@ export default {
         this.parent.changeLan()
       } else if (val.title == '页面切换数据交互') {
         name = 'data_trans'
-          data={
-              data: { userId: '123' }
+        data = {
+          data: { userId: '123' }
+        }
+      } else if (val.title == 'webrtc') {
+        name = 'test_video'
+      } else if (val.title == 'threejs') {
+        name = 'test_threejs_load'
+        // name='testthree'
+      } else if (val.title == 'test-threejs-edit') {
+        name = 'test_threejs_edit'
+      } else if (val.title == 'aframe') {
+        name = 'test_aframe'
+      } else if (val.title == 'wujie') {
+        name = 'test_wujie'
+
+        if (window.__POWERED_BY_WUJIE__) {
+          if (window.$wujie?.bus?.id == 'trdproject') {
+              data = {
+                  data: {
+                      name: 'secproject',
+                      url: '//192.168.3.4:8080/test2/secproject/#/'
+                  }
+              }
           }
-      }else if(val.title=='webrtc'){
-          name='test_video'
-      }else if (val.title == 'threejs') {
-         name='test_threejs_load'
-          // name='testthree'
-      }else if (val.title == 'aframe') {
-          name='test_aframe'
+        }
+        console.log('-----111---',data)
       }
 
       if (name) {
         this.$router.push({
           name: name,
-          state:data
+          state: data
         })
       }
     }
