@@ -1,5 +1,5 @@
 <script setup name="test_video">
-import Page from '@/components/page'
+import Page, { PageNavDef } from '@/components/page'
 import { useRouter } from 'vue-router'
 import {
   provide,
@@ -9,25 +9,47 @@ import {
   onActivated,
   onDeactivated,
   onBeforeUnmount,
-  reactive
+  reactive,
+  computed,
+  inject
 } from 'vue'
 import { MultiStreamsMixer } from '@/components/media/MultiStreamsMixer'
 import { RecordRTC } from '@/components/media/RecordRTC'
 import { FileSelector } from '@/components/media/tools/FileSelector'
 import reloadWatch from '@/utils/listener/reload-watch'
+import TextRtc from '@/views/module/tests/com/text-rtc'
+import StreamRtc from '@/views/module/tests/com/stream-rtc'
 import Is from '@/utils/is'
-import loaderMap from '@/components/threejs/load/loader-map'
 const router = useRouter()
-const params = ref({
-  nav: {
-    show: false,
-    title: 'main'
-  }
+const i18n_t = inject('i18n_t')
+const navDef = reactive({
+  nav: PageNavDef.config({
+    show: true,
+    clickable: true,
+    leftArrow: false,
+    placeholder: true,
+    title: computed(() => {
+      // 直接赋值 无响应式，是否有其他方式？？？
+      return i18n_t('main.nav.title')
+    }),
+    leftText: computed(() => {
+      return i18n_t('main.nav.leftText')
+    }),
+    clickLeft: function () {
+      return true
+    },
+    rightText: computed(() => {
+      return '选择loader'
+    }),
+    clickRight: function () {
+      return false
+    }
+  })
 })
-watch(params.value, (newValue, oldValue) => {
-  console.log('值发生了变更', newValue, oldValue)
-})
-provide('navParams', params)
+// watch(params.value, (newValue, oldValue) => {
+//   console.log('值发生了变更', newValue, oldValue)
+// })
+provide('navParams', navDef)
 const count = ref(0)
 onActivated(() => {
   // count.value++
@@ -51,6 +73,7 @@ nextTick(function () {
     dispose()
     startButton.value = 'start'
   })
+    alert('处理中')
 })
 const onMouseDown = function (event) {
   // event.preventDefault()
@@ -78,6 +101,10 @@ const onMouseDown = function (event) {
   }
 }
 const dispose = function () {
+  if (ws) {
+    ws.close()
+    ws = null
+  }
   showVideo.value = false
   updateMediaHTML('')
   if (Is.isMobileDevice()) {
@@ -119,7 +146,7 @@ const showVideo = ref(false)
 let mixer = null
 
 function updateMediaHTML(html) {
-  oupput.value.innerHTML = html
+  if (oupput.value) oupput.value.innerHTML = html
 }
 const mixerOptions = reactive({
   value: '(pc)camera-screen',
@@ -632,6 +659,95 @@ const changeMixerOption = function () {
 const startButton = ref('start')
 const audioPreviewRef = ref()
 const audioPreviewRefShow = ref(false)
+
+let ws = null
+let wsUrl = 'wss://localhost:5173/socket.io'
+let users = null
+
+let rtcMgr = {
+  textMgr: null,
+  streamMgr: []
+}
+const makeTextRtc = function () {
+  let textRtc = new TextRtc(
+    wsUrl, // 流回调
+    (name, type, myStream) => {
+      let video = null
+      if (type == 'ws') {
+        if (myStream.type == 'alluser') {
+          users = myStream.data.user
+          if (users) {
+            loaderOptions2.options = []
+            users.forEach((it) => {
+              if (it != userSelf.value) {
+                loaderOptions2.options.push({
+                  name: it
+                })
+              }
+            })
+            showActionSheet2.value = true
+          }
+        } else if (myStream.type == 'login') {
+          userSelf.value = myStream.data.user
+        }
+      } else if (type == 'text') {
+      } else if (type == 'stream') {
+        // video = that.localStream;
+        // video.srcObject = that.myStream;
+      } else if (type == '') {
+        // console.log(`${name}向你发起视频通话`);
+        // let index = that.users.indexOf(name);
+        // if (index < 0) {
+        //     // 建立通信的其它人加入集合
+        //     that.users.push(name);
+        //     index = that.users.length;
+        // }
+        // that.nextTick(() => {
+        //     video = that.audioDomList[index];
+        //     if (video) {
+        //         if ("srcObject" in video) {
+        //             video.srcObject = myStream;
+        //         } else {
+        //             video.src = window.URL.createObjectURL(myStream);
+        //         }
+        //     }
+        // });d
+      }
+    }
+  )
+  rtcMgr.textMgr = textRtc
+  ws = textRtc.ws
+}
+nextTick(function () {
+  makeTextRtc()
+})
+const websoc = function (type) {
+  if (type == 2) {
+    //先选人
+    if (loaderOptions2.value) {
+      rtcMgr.textMgr.call(loaderOptions2.value)
+      // ws.send(
+      //     JSON.stringify({ type: 'call', data: { caller: user, receiver: loaderOptions2.value } })
+      // )
+    }
+  } else if (type == 1) {
+    ws.send(JSON.stringify({ type: 'alluser', data: { a: 1 } }))
+  } else if (type == 0) {
+    ws.send(JSON.stringify({ type: 'login', data: { a: 1 } }))
+  } else if (type == -1) {
+    ws.send(JSON.stringify({ type: 'clear', data: { a: 1 } }))
+  }
+}
+const showActionSheet2 = ref(false)
+const onSelected2 = (action) => {
+  showActionSheet2.value = false
+  loaderOptions2.value = action.name
+}
+const loaderOptions2 = reactive({
+  value: '',
+  options: []
+})
+const userSelf = ref('')
 </script>
 <template>
   <page ref="mainPageRef" class="main-page">
@@ -652,6 +768,23 @@ const audioPreviewRefShow = ref(false)
           description="切换"
           @select="onSelected"
         />
+
+        <van-action-sheet
+          v-model:show="showActionSheet2"
+          :actions="loaderOptions2.options"
+          :cancel-text="'取消'"
+          description="切换"
+          @select="onSelected2"
+        />
+      </div>
+      <div>
+        <van-button type="primary" style="margin-right: 10px" @click="websoc(-1)">clear</van-button>
+        <van-button type="primary" style="margin-right: 10px" @click="websoc(0)">login</van-button>
+        <van-button type="primary" style="margin-right: 10px" @click="websoc(1)"
+          >alluser</van-button
+        >
+        <van-button type="primary" style="margin-right: 10px" @click="websoc(2)">call</van-button>
+        <div>{{ userSelf }}--{{loaderOptions2.value}}</div>
       </div>
       <section class="experiment" style="text-align: center">
         <div id="video-preview">
