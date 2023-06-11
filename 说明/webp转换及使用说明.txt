@@ -15,6 +15,8 @@ import {getAssetsFile} from '@/utils/webp'
 注：1、这里的 earth.png 也可带目录 login/earth.png，
 注：2、getAssetsFile的核心是这个静态目录的引用,这里的img可以自定义
      let path = new URL(`../../assets/img/${url}`, import.meta.url).href
+
      这里需要注意两点：
      1）../../assets/img/ 这里没法直接用../../assets/,会抛错
      2）不能修改url的值，可以修改path的值
+     3) 主应用 使用了无界框架，应用作为子应用被加载，需要修复path（见：utils/wujie/wujie-url.js）

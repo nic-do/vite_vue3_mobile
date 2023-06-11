@@ -38,7 +38,7 @@ export default defineConfig(({ command, mode }) => ({
         compilerOptions: {
           //这里是配置 aframe的
           // 将所有带短横线的标签名都视为自定义元素
-          isCustomElement: (tag) =>tag.startsWith('a-')// tag.includes('a-')
+          isCustomElement: (tag) => tag.startsWith('a-') // tag.includes('a-')
         }
       }
     }),
@@ -72,10 +72,10 @@ export default defineConfig(({ command, mode }) => ({
     // port:8081,
     host: '0.0.0.0',
     // https:true,
-    https: {
-      key: fs.readFileSync('keys/home2-key.pem'),
-      cert: fs.readFileSync('keys/home2-cert.pem')
-    },
+    // https: {
+    //   key: fs.readFileSync('keys/home2-key.pem'),
+    //   cert: fs.readFileSync('keys/home2-cert.pem')
+    // },
     proxy: {
       // '/trans/vip': {
       //   //设置跨域
@@ -88,9 +88,10 @@ export default defineConfig(({ command, mode }) => ({
   },
   // define 注入的变量， 在 mock文件中也可以使用
   define: {
-    __IS_DEVELOPMENT__: JSON.stringify(mode === 'development'),
+    __IS_DEVELOPMENT__: JSON.stringify(mode === 'development')
   },
   ///////////////////
+  base: './',
   build: {
     assetsInlineLimit: 4096, // 小于此阈值的图片转为图片转 base64,减少http 请求
     outDir: resolve(__dirname, 'dist'), //构建目录
@@ -111,7 +112,7 @@ export default defineConfig(({ command, mode }) => ({
     },
     //压缩代码 默认为 Esbuild，它比 terser 快 20-40 倍，压缩率只差 1%-2%。
     minify: 'esbuild', // boolean | 'terser' | 'esbuild'
-    sourcemap: true,
+    sourcemap: false
   },
   esbuild: {
     //去log信息
